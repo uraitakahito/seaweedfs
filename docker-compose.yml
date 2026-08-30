@@ -1,0 +1,34 @@
+# SeaweedFS を単体で立てるための compose。
+#
+# **これが原本**。消費者 (browserhive / waggle / waxlens) はこの service ブロックを
+# 写して使う —— container-compose は include: も extends: も使えないので、共有する
+# 手段が無い。写した先がずれても誰も気づかないので、迷ったらここを見ること。
+#
+#   container-compose up -d          # 立てる
+#   container-compose down           # 畳む
+#
+# 設定は env だけで決まる (etc/entrypoint.sh の冒頭を参照)。ここは既定の見本で、
+# 消費者はそれぞれの bucket 名と、必要なら S3_ANONYMOUS_READ を渡す。
+name: seaweedfs
+
+services:
+  seaweedfs:
+    image: docker.io/chrislusf/seaweedfs:4.23
+    # entrypoint が bucket 作成も兼ねる (背後でリトライし続ける) —— 順番を面倒みる
+    # べき使い捨ての init コンテナは、別に存在しない。
+    entrypoint: ["/etc/seaweedfs/entrypoint.sh"]
+    environment:
+      - S3_ACCESS_KEY_ID=seaweedfs
+      - S3_SECRET_ACCESS_KEY=seaweedfs
+      - S3_BUCKET=seaweedfs
+    # 8333 が S3 API、8888 が filer の UI。host 側の道具のために publish する。
+    ports:
+      - "127.0.0.1:8333:8333"
+      - "127.0.0.1:8888:8888"
+    volumes:
+      # read-only で mount する。設定は /tmp に書き出されるので、これで足りる。
+      - ./etc:/etc/seaweedfs:ro
+      - seaweedfs-data:/data
+
+volumes:
+  seaweedfs-data:
