@@ -3,9 +3,9 @@
 # 設定を **その場で組み立てる**。
 #
 # テンプレートファイルを置いていないのは、identity の中身が配備ごとに違うため ——
-# browserhive は replay に読ませるための anonymous が要り、waxlens は要らない。
+# browserhive は replay に読ませるための anonymous が要り、wacz-validator は要らない。
 # ファイルにすると、その差を表す手段が「fork する」しか無くなる。実際そうなっていて、
-# 切り出す前は browserhive と waxlens で 3 ファイルすべてが分岐していた。
+# 切り出す前は browserhive と wacz-validator (当時の waxlens) で 3 ファイルすべてが分岐していた。
 #
 # 設定は env だけで決まる:
 #
