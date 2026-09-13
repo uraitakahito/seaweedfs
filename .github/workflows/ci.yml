@@ -1,0 +1,24 @@
+name: ci
+
+# 版の正は docker-compose.yml の image の 1 行。README の見本がそこからずれたら落とす。
+# verify.sh は Apple Container を要るのでここでは走らせない (版を上げるときに手で回す)。
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: README の見本の版が compose と同じ
+        run: sh scripts/check-pin.sh README.md
+      - name: shell の構文
+        run: |
+          for f in scripts/verify.sh scripts/check-pin.sh etc/entrypoint.sh etc/init-bucket.sh; do
+            sh -n "$f"
+          done

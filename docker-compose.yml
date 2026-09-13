@@ -1,8 +1,9 @@
 # SeaweedFS を単体で立てるための compose。
 #
-# **これが原本**。消費者 (browserhive / waggle / waxlens) はこの service ブロックを
-# 写して使う —— container-compose は include: も extends: も使えないので、共有する
-# 手段が無い。写した先がずれても誰も気づかないので、迷ったらここを見ること。
+# **これが原本**。消費者 (browserhive / capture-ledger / wacz-validator) はこの service
+# ブロックを写して使う —— container-compose は include: も extends: も使えないので、
+# 共有する手段が無い。写しの image の版がこことずれると、各消費者の check が
+# scripts/check-pin.sh で落とす。
 #
 #   container-compose up -d          # 立てる
 #   container-compose down           # 畳む
@@ -13,7 +14,9 @@ name: seaweedfs
 
 services:
   seaweedfs:
-    image: docker.io/chrislusf/seaweedfs:4.23
+    # 版を上げるときは scripts/verify.sh を回してから (頼っている挙動を実物で確かめる)。
+    # 4.27 未満に戻さないこと: 空にしたバケットが再起動で書けなくなる (上流 #9563)。
+    image: docker.io/chrislusf/seaweedfs:4.46
     # entrypoint が bucket 作成も兼ねる (背後でリトライし続ける) —— 順番を面倒みる
     # べき使い捨ての init コンテナは、別に存在しない。
     entrypoint: ["/etc/seaweedfs/entrypoint.sh"]
