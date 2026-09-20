@@ -71,8 +71,8 @@ Empty the bucket while keeping the bucket itself. **The operation you will use m
 development.**
 
 ```sh
-sh scripts/wipe.sh browserhive                                   # the shared store
-sh scripts/wipe.sh browserhive http://seaweedfs.browserhive:8333 # a throwaway store
+sh scripts/wipe.sh browserhive                         # the shared store
+sh scripts/wipe.sh browserhive http://127.0.0.1:18333  # a throwaway store (verify.sh's default port)
 ```
 
 Only the artifacts go; the bucket and SeaweedFS's own state stay. The next capture writes straight

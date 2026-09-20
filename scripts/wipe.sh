@@ -1,9 +1,10 @@
 #!/bin/sh
 # bucket の中身だけを空にする。**開発中にいちばん使う操作。**
 #
-#   sh scripts/wipe.sh browserhive                                    # 127.0.0.1:8333 の store
-#   sh scripts/wipe.sh browserhive http://seaweedfs.browserhive:8333  # 名前で指す
-#   sh scripts/wipe.sh browserhive "" --dryrun                        # 3 つ目以降は aws へ渡る
+#   sh scripts/wipe.sh browserhive                                        # 共有 store (127.0.0.1:8333)
+#   sh scripts/wipe.sh browserhive http://seaweedfs.crawler-storage:8333  # 名前で指す
+#   sh scripts/wipe.sh browserhive http://127.0.0.1:18333                 # 使い捨ての store (verify.sh の既定)
+#   sh scripts/wipe.sh browserhive "" --dryrun                            # 3 つ目以降は aws へ渡る
 #
 # bucket は消さない —— 作り直すと identity の設定と食い違う瞬間ができる。空にするだけなら
 # 4.27 以降は安全 (4.26 以前は、空にした bucket が再起動で書けなくなる。上流 #9563)。

@@ -17,6 +17,10 @@ jobs:
       - uses: actions/checkout@v7
       - name: README の見本の版が compose と同じ
         run: sh scripts/check-pin.sh README.md
+      # 消費者に配っている検査を、この repo 自身にも当てる。ここの docs は endpoint の
+      # 見本を書くので、repo ごとの store の名前がいちばん戻りやすい。
+      - name: store の名前は共有のものだけ
+        run: sh scripts/check-store-name.sh crawler-storage
       - name: shell の構文
         run: |
           for f in scripts/*.sh etc/*.sh; do
