@@ -15,8 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: README の見本の版が compose と同じ
-        run: sh scripts/check-pin.sh README.md
+      # 版の見本は README ではなく docs-site の upgrading のページに在る
+      # (README は入口だけに畳んだ)。en/ja の対と、docs が名指しする repo の
+      # パスの実在も、ここでまとめて見る。
+      - name: docs の参照（en/ja の対・パス・版の見本）
+        run: sh scripts/check-doc-refs.sh
       # 消費者に配っている検査を、この repo 自身にも当てる。ここの docs は endpoint の
       # 見本を書くので、repo ごとの store の名前がいちばん戻りやすい。
       - name: store の名前は共有のものだけ
