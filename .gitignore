@@ -1,1 +1,4 @@
 .DS_Store
+
+# docs-site は自分の .gitignore を持つ（node_modules / dist / .astro）。
+# ここに書かないのは、消費者が submodule として取り込むときに二重に見えないようにするため。

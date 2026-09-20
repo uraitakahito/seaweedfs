@@ -1,7 +1,10 @@
-# SeaweedFS の操作
+---
+title: 運用
+description: bucket を空にする・中身を見る・weed shell・store ごとリセットする。
+---
 
 この repo の設定で立てた store を、開発中に手で触るためのページ。英語版は
-[operations.md](operations.md)。store そのものの立て方と設定は [README](../README.md) に、
+[English version](/operations/)。store そのものの立て方と設定は [Quickstart](/quickstart/) に、
 成果物ストアの設計（外部 S3 への向け方、アドレッシング方式、region の意味）は消費者側の
 docs にある。
 
@@ -23,9 +26,11 @@ sh scripts/wipe.sh <bucket>
 | wacz-validator | `wacz-validator` | `http://seaweedfs.crawler-storage:8333` |
 
 **鍵は bucket 名と同じ**（`accessKey` も `secretKey` も）。identity は bucket ごとに分かれて
-いて、自分の bucket の外は触れない。使い捨ての store（消費者の `--own-store`）を見るときは、
-宛先だけ `http://seaweedfs.<project>:8333` に読み替える —— `<project>` は消費者の compose の
-project 名で、そのまま DNS ドメインになる。
+いて、自分の bucket の外は触れない。
+
+**store は 1 つだけ**で、消費者が自分の store を立てることはもう無い。使い捨ての store は
+`scripts/verify.sh` が版を確かめる間だけ立てるもので、宛先は `http://127.0.0.1:18333` ——
+そちらを見るときは、この頁のコマンドの宛先をそれに読み替える。
 
 ```sh
 export AWS_ACCESS_KEY_ID=browserhive

@@ -1,0 +1,23 @@
+version: 2
+
+# **directory は /docs-site。** root の entry ではこの lockfile に届かない ——
+# root には package.json も lockfile も無く、Node が在るのは docs-site の中だけ。
+updates:
+  - package-ecosystem: npm
+    directory: /docs-site
+    schedule:
+      interval: weekly
+    # docs の依存は配るものではないので、1 本の PR にまとめる。
+    open-pull-requests-limit: 1
+    groups:
+      docs-site:
+        patterns: ['*']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 1
+    groups:
+      actions:
+        patterns: ['*']
