@@ -19,6 +19,6 @@ jobs:
         run: sh scripts/check-pin.sh README.md
       - name: shell の構文
         run: |
-          for f in scripts/verify.sh scripts/check-pin.sh etc/entrypoint.sh etc/init-bucket.sh; do
+          for f in scripts/verify.sh scripts/check-pin.sh scripts/wipe.sh etc/entrypoint.sh etc/init-bucket.sh; do
             sh -n "$f"
           done
