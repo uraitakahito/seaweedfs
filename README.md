@@ -19,6 +19,7 @@ sh scripts/stack.sh up
 ```
 
 宛先は `http://seaweedfs.crawler-storage:8333`（host からは `http://127.0.0.1:8333`）。
+撮ったものを新しい順に探すなら `http://127.0.0.1:8888/ui/index.html`。
 
 ## この repo に在るもの
 
@@ -26,7 +27,8 @@ sh scripts/stack.sh up
 |---|---|
 | `docker-compose.yml` | **版の正。** image の 1 行が、すべての消費者の基準 |
 | `etc/` | entrypoint（identity を env から組み立てる）と bucket の初期化 |
-| `scripts/` | `stack.sh`（起動口）・`wipe.sh`・`verify.sh`（版を上げる前に回す）・`check-*.sh` |
+| `scripts/` | `stack.sh`（起動口）・`ui.sh`・`wipe.sh`・`verify.sh`（版を上げる前に回す）・`check-*.sh` |
+| `ui/` | 成果物を新しい順で見る画面（1 ファイル。`stack.sh up` が filer へ置く） |
 | `docs-site/` | 上のドキュメントの原稿（Astro + Starlight） |
 
 ## 消費者

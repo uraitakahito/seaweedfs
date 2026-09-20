@@ -4,7 +4,7 @@ description: bucket を空にする・中身を見る・weed shell・store ご�
 ---
 
 この repo の設定で立てた store を、開発中に手で触るためのページ。英語版は
-[English version](/operations/)。store そのものの立て方と設定は [Quickstart](/quickstart/) に、
+[English version](/seaweedfs/operations/)。store そのものの立て方と設定は [Quickstart](/quickstart/) に、
 成果物ストアの設計（外部 S3 への向け方、アドレッシング方式、region の意味）は消費者側の
 docs にある。
 
@@ -118,11 +118,14 @@ aws s3 cp s3://browserhive/<key>.result.json - | jq .
 aws s3 cp s3://browserhive/<key>.wacz ./out.wacz
 ```
 
-ブラウザで眺めるなら Filer が早い。
+ブラウザで探すなら[成果物を探す](/ja/store-ui/)の画面が早い。**新しい順に並ぶ。**
 
 ```
-http://seaweedfs.crawler-storage:8888/buckets/browserhive/
+http://127.0.0.1:8888/ui/index.html
 ```
+
+filer の素の一覧（`http://127.0.0.1:8888/buckets/browserhive/`）は**名前順にしか
+返らない**ので、日時で探すのには向かない。
 
 ## weed shell —— SeaweedFS 自身の CLI
 

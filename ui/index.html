@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>store の中身</title>
+    <!--
+      共有 store を「新しい順」で見るための 1 枚。**依存は無い** —— framework も
+      build も使わないので、このファイルを filer に置くだけで動く。置き方は
+      scripts/ui.sh、読み方は docs-site の store-ui のページ。
+
+      なぜ要るか: S3 の ListObjectsV2 は鍵を **名前順にしか返さない**
+      (仕様に並べ替えの引数が無い)。filer の画面も weed admin も同じで、
+      「さっき撮ったやつ」を名前の海から探すことになる。並べ替えは
+      サーバ側では決して手に入らないので、**受け取った側で並べる**しかない。
+
+      置き場所が /ui/ で /buckets/ の外なのは意図的:
+        - S3 の bucket に置くと、成果物の一覧に画面自身が出てしまう
+        - filer と同一オリジンなので CORS も Private Network Access も関係ない
+          (docs サイト側に置く道は塞がっている —— filer は preflight に
+           Access-Control-Allow-Private-Network を返さないので、https の
+           ページから 127.0.0.1 を叩くと Chrome が止める。実測)
+    -->
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f4f5f9;
+        --panel: #ffffff;
+        --ink: #1d2230;
+        --sub: #61687d;
+        --line: #dfe3ed;
+        --line-soft: #eef0f6;
+        --accent: #2f6fd0;
+        --accent-ink: #ffffff;
+        --chip: #eef1f8;
+        --chip-ink: #414a61;
+        --wacz: #e8f1ff;
+        --wacz-ink: #17509e;
+        --warn-bg: #fff6e8;
+        --warn-line: #f0dcb8;
+        --warn-ink: #8a5a09;
+        --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        --sans: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #15171e;
+          --panel: #1c1f28;
+          --ink: #e6e9f2;
+          --sub: #9aa2b8;
+          --line: #2b3040;
+          --line-soft: #242836;
+          --accent: #5b9bf0;
+          --accent-ink: #0d1016;
+          --chip: #262b38;
+          --chip-ink: #b7bfd2;
+          --wacz: #1b2c47;
+          --wacz-ink: #8fbcf7;
+          --warn-bg: #2c2415;
+          --warn-line: #4a3c1d;
+          --warn-ink: #e0bc70;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 14px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      header {
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+        padding: 14px 16px 0;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+      }
+      .head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 10px;
+        max-width: 1180px;
+        margin: 0 auto 12px;
+      }
+      h1 { font-size: 16px; margin: 0; letter-spacing: .01em; }
+      .where { font-family: var(--mono); font-size: 12px; color: var(--sub); }
+      .where a { color: inherit; }
+      .grow { flex: 1 1 auto; }
+      .bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        max-width: 1180px;
+        margin: 0 auto;
+        padding-bottom: 12px;
+      }
+      select, input[type="search"], button {
+        font: inherit;
+        color: inherit;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 5px 9px;
+      }
+      input[type="search"] { min-width: 12rem; flex: 1 1 12rem; max-width: 22rem; }
+      button { cursor: pointer; }
+      button:hover, select:hover { border-color: var(--accent); }
+      button[aria-pressed="true"] {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-ink);
+        font-weight: 600;
+      }
+      :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+      .count { font-size: 12.5px; color: var(--sub); margin-left: auto; font-variant-numeric: tabular-nums; }
+      main { max-width: 1180px; margin: 0 auto; padding: 16px; }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .scroll { overflow-x: auto; }
+      table { border-collapse: collapse; width: 100%; font-size: 13px; }
+      th, td { text-align: left; padding: 7px 12px; border-bottom: 1px solid var(--line-soft); vertical-align: baseline; }
+      tbody tr:last-child td { border-bottom: 0; }
+      thead th {
+        position: sticky;
+        top: 0;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--sub);
+        white-space: nowrap;
+      }
+      th.sortable { cursor: pointer; user-select: none; }
+      th.sortable:hover { color: var(--accent); }
+      tbody tr:hover { background: var(--line-soft); }
+      td.when { font-family: var(--mono); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+      td.size { font-family: var(--mono); font-size: 12px; white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; color: var(--sub); }
+      td.label { font-family: var(--mono); font-size: 12px; word-break: break-all; }
+      td.label .none { color: var(--sub); font-family: var(--sans); }
+      td.id { font-family: var(--mono); font-size: 11.5px; color: var(--sub); white-space: nowrap; }
+      td.kinds { white-space: nowrap; }
+      .kind {
+        display: inline-block;
+        font-family: var(--mono);
+        font-size: 11.5px;
+        text-decoration: none;
+        background: var(--chip);
+        color: var(--chip-ink);
+        border-radius: 5px;
+        padding: 1px 7px;
+        margin-right: 4px;
+      }
+      .kind:hover { background: var(--accent); color: var(--accent-ink); }
+      .kind.play { background: var(--wacz); color: var(--wacz-ink); font-weight: 600; }
+      .msg { padding: 28px 16px; text-align: center; color: var(--sub); }
+      .err {
+        background: var(--warn-bg);
+        border: 1px solid var(--warn-line);
+        color: var(--warn-ink);
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 16px;
+      }
+      .err b { display: block; margin-bottom: 4px; }
+      .err code { font-family: var(--mono); font-size: 12px; }
+      .err ul { margin: 6px 0 0; padding-left: 20px; }
+      [hidden] { display: none !important; }
+      @media (max-width: 640px) {
+        td.id, th.id { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="head">
+        <h1>store の中身</h1>
+        <span class="where" id="where"></span>
+        <span class="grow"></span>
+      </div>
+      <div class="bar">
+        <select id="bucket" aria-label="bucket"></select>
+        <input id="q" type="search" placeholder="絞り込み（/ で移動）" aria-label="絞り込み" />
+        <select id="kind" aria-label="種類"><option value="">種類：すべて</option></select>
+        <!--
+          e2e を既定で隠す。今日の実測で 274 capture のうち 266 が e2e で、
+          隠さないと自分で撮ったものが埋もれる。**隠すだけで消しはしない** ——
+          実体を減らすのは片付けの仕事で、この画面の仕事ではない。
+        -->
+        <button id="hide-e2e" type="button" aria-pressed="true">e2e を隠す</button>
+        <button id="reload" type="button">再読み込み</button>
+        <span class="count" id="count"></span>
+      </div>
+    </header>
+
+    <main>
+      <div class="err" id="error" hidden></div>
+      <div class="panel">
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th class="sortable" id="sort-at" scope="col">時刻</th>
+                <th scope="col">ラベル</th>
+                <th scope="col">成果物</th>
+                <th class="sortable" id="sort-size" scope="col" style="text-align: right">大きさ</th>
+                <th class="id" scope="col">taskId</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="msg" id="msg">読み込み中…</div>
+      </div>
+    </main>
+
+    <script>
+      "use strict";
+
+      const params = new URLSearchParams(location.search);
+
+      // filer の宛先。この画面が filer から配られているなら同一オリジンで足りる。
+      // file:// で開いたときだけ既定の loopback を使う (?filer= で上書き可)。
+      const FILER = (
+        params.get("filer") ??
+        (location.protocol.startsWith("http") ? location.origin : "http://127.0.0.1:8888")
+      ).replace(/\/+$/, "");
+
+      // WACZ ビューア。replay は **browserhive の bucket 1 つだけ**を上流に持つので
+      // (replay の S3_BUCKET_URL)、他の bucket の鍵を渡しても 502 になるだけ。
+      // だから ▶ を出すのはこの bucket のときだけにする。?replay= で上書き可、
+      // 空文字なら出さない。
+      const REPLAY_BUCKET = params.get("replayBucket") ?? "browserhive";
+      const REPLAY_BASE = (params.get("replay") ?? "https://replay.browserhive").replace(/\/+$/, "");
+
+      // 1 回の listing で取る件数と、繋ぐ回数の上限。**上限は飾りではない** ——
+      // cursor の渡し方を間違えると filer は黙って先頭から返し (lastFileName に
+      // FullPath を渡すと実際そうなる)、上限が無ければ無限に回り続ける。
+      const PAGE = 1000;
+      const MAX_PAGES = 200;
+
+      const $ = (id) => document.getElementById(id);
+      const el = { bucket: $("bucket"), q: $("q"), kind: $("kind"), hideE2e: $("hide-e2e"),
+                   reload: $("reload"), count: $("count"), rows: $("rows"), msg: $("msg"),
+                   error: $("error"), where: $("where"), sortAt: $("sort-at"), sortSize: $("sort-size") };
+
+      const state = { rows: [], objects: 0, sort: "at", desc: true };
+
+      const getJson = async (path) => {
+        const res = await fetch(`${FILER}${path}`, { headers: { Accept: "application/json" } });
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText} — ${path}`);
+        return res.json();
+      };
+
+      const basename = (fullPath) => fullPath.slice(fullPath.lastIndexOf("/") + 1);
+
+      // Go の os.ModeDir (1<<31)。filer は Mode をそのまま整数で返す。
+      const isDir = (entry) => (entry.Mode & 0x80000000) !== 0;
+
+      const listBuckets = async () => {
+        const body = await getJson("/buckets/");
+        return (body.Entries ?? [])
+          .filter(isDir)
+          .map((e) => basename(e.FullPath))
+          // .system は filer が自分で作る置き場で、消費者の bucket ではない。
+          .filter((name) => !name.startsWith("."));
+      };
+
+      const listObjects = async (bucket) => {
+        const seen = new Map();
+        let last = "";
+        let version = "";
+        for (let page = 0; page < MAX_PAGES; page++) {
+          const query = `limit=${PAGE}&lastFileName=${encodeURIComponent(last)}`;
+          const body = await getJson(`/buckets/${encodeURIComponent(bucket)}/?${query}`);
+          version = body.Version ?? version;
+          const entries = body.Entries ?? [];
+          if (entries.length === 0) break;
+          // FullPath を鍵にした Map は保険。cursor が効いている限り重複は来ないが、
+          // 効かなくなったときに件数が嘘になるより、黙って揃っているほうがいい。
+          for (const entry of entries) seen.set(entry.FullPath, entry);
+          // cursor は **basename**。FullPath を渡すと cursor ごと無視される (実測)。
+          last = basename(entries[entries.length - 1].FullPath);
+          if (!body.ShouldDisplayLoadMore) break;
+        }
+        return { entries: [...seen.values()], version };
+      };
+
+      // 鍵の形は `{taskId}_{correlationId}[_{label}]*.{拡張子}` で、値の中の `_` と `.`
+      // は %5F / %2E に逃がされている —— だから `_` で割るのも、**最初の** `.` で
+      // 拡張子を切るのも安全 (links.json のような 2 段の拡張子もそのまま残る)。
+      // 出どころは browserhive の src/capture/artifact-name.ts。
+      //
+      // **これは表示のための写しで、正しさは何も乗っていない。** 別の綴りの鍵が来たら
+      // 下の parseKey が null を返し、その鍵は 1 行として素のまま並ぶ。腐っても
+      // 表示が素っ気なくなるだけで、嘘にはならない。
+      const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const decodeField = (value) =>
+        value.replace(/%([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+
+      const parseKey = (key) => {
+        const dot = key.indexOf(".");
+        if (dot === -1) return null;
+        const [taskId, correlationId, ...labels] = key.slice(0, dot).split("_");
+        if (!UUID.test(taskId) || correlationId === undefined) return null;
+        return {
+          taskId,
+          correlationId: decodeField(correlationId),
+          labels: labels.map(decodeField),
+          extension: key.slice(dot + 1),
+        };
+      };
+
+      // 1 回の取り込みは複数のオブジェクトを書く (wacz / png / html / result.json …)。
+      // 探しているのは「いつ撮ったどれ」であって個々のファイルではないので、
+      // taskId でまとめて 1 行にする。今日の実測で 549 オブジェクト → 274 行。
+      const toRows = (entries) => {
+        const byTask = new Map();
+        for (const entry of entries) {
+          const key = basename(entry.FullPath);
+          const parsed = parseKey(key);
+          const id = parsed ? parsed.taskId : key;
+          let row = byTask.get(id);
+          if (!row) {
+            row = { id, at: "", size: 0, labels: [], correlationId: "", grouped: Boolean(parsed), kinds: [] };
+            byTask.set(id, row);
+          }
+          if (parsed) {
+            row.labels = parsed.labels.length > 0 ? parsed.labels : row.labels;
+            row.correlationId = parsed.correlationId || row.correlationId;
+          }
+          row.at = entry.Mtime > row.at ? entry.Mtime : row.at;
+          row.size += entry.FileSize ?? 0;
+          row.kinds.push({ ext: parsed ? parsed.extension : "", key, size: entry.FileSize ?? 0 });
+        }
+        for (const row of byTask.values()) row.kinds.sort((a, b) => a.ext.localeCompare(b.ext));
+        return [...byTask.values()];
+      };
+
+      const timeFmt = new Intl.DateTimeFormat(undefined, {
+        month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+      });
+      const showTime = (iso) => (iso ? timeFmt.format(new Date(iso)) : "");
+
+      const showSize = (bytes) => {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} kB`;
+        return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+      };
+
+      const objectUrl = (bucket, key) => `${FILER}/buckets/${encodeURIComponent(bucket)}/${encodeURIComponent(key)}`;
+
+      const isE2e = (row) => row.labels.includes("e2e");
+
+      const visibleRows = () => {
+        const needle = el.q.value.trim().toLowerCase();
+        const kind = el.kind.value;
+        const hide = el.hideE2e.getAttribute("aria-pressed") === "true";
+        return state.rows
+          .filter((row) => !(hide && isE2e(row)))
+          .filter((row) => kind === "" || row.kinds.some((k) => k.ext === kind))
+          .filter((row) =>
+            needle === "" ||
+            row.id.toLowerCase().includes(needle) ||
+            row.correlationId.toLowerCase().includes(needle) ||
+            row.labels.join(" ").toLowerCase().includes(needle) ||
+            row.kinds.some((k) => k.key.toLowerCase().includes(needle)))
+          .sort((a, b) => {
+            const by = state.sort === "size" ? a.size - b.size : a.at.localeCompare(b.at);
+            return state.desc ? -by : by;
+          });
+      };
+
+      const render = () => {
+        const bucket = el.bucket.value;
+        const rows = visibleRows();
+        el.rows.replaceChildren(
+          ...rows.map((row) => {
+            const tr = document.createElement("tr");
+
+            const when = document.createElement("td");
+            when.className = "when";
+            when.textContent = showTime(row.at);
+            when.title = row.at;
+
+            const label = document.createElement("td");
+            label.className = "label";
+            const text = [row.labels.join(" / "), row.correlationId].filter(Boolean).join("  ·  ");
+            if (text) {
+              label.textContent = text;
+            } else {
+              const none = document.createElement("span");
+              none.className = "none";
+              none.textContent = row.grouped ? "（ラベル無し）" : row.id;
+              label.append(none);
+            }
+
+            const kinds = document.createElement("td");
+            kinds.className = "kinds";
+            for (const kind of row.kinds) {
+              const a = document.createElement("a");
+              a.className = "kind";
+              a.href = objectUrl(bucket, kind.key);
+              a.textContent = kind.ext || "開く";
+              a.title = `${kind.key}（${showSize(kind.size)}）`;
+              kinds.append(a);
+              if (kind.ext === "wacz" && REPLAY_BASE && bucket === REPLAY_BUCKET) {
+                const play = document.createElement("a");
+                play.className = "kind play";
+                play.href = `${REPLAY_BASE}/?source=/wacz/${encodeURIComponent(kind.key)}`;
+                play.target = "_blank";
+                play.rel = "noopener";
+                play.textContent = "▶ replay";
+                kinds.append(play);
+              }
+            }
+
+            const size = document.createElement("td");
+            size.className = "size";
+            size.textContent = showSize(row.size);
+
+            const id = document.createElement("td");
+            id.className = "id";
+            id.textContent = row.grouped ? row.id.slice(0, 8) : "—";
+            id.title = row.id;
+
+            tr.append(when, label, kinds, size, id);
+            return tr;
+          }),
+        );
+
+        el.count.textContent = `${rows.length} / ${state.rows.length} 件（オブジェクト ${state.objects} 個）`;
+        el.msg.hidden = rows.length > 0;
+        el.msg.textContent = state.rows.length === 0 ? "この bucket は空です" : "絞り込みに合うものがありません";
+        el.sortAt.textContent = `時刻${state.sort === "at" ? (state.desc ? " ▾" : " ▴") : ""}`;
+        el.sortSize.textContent = `大きさ${state.sort === "size" ? (state.desc ? " ▾" : " ▴") : ""}`;
+      };
+
+      const fillKinds = () => {
+        const found = [...new Set(state.rows.flatMap((row) => row.kinds.map((k) => k.ext)))].filter(Boolean).sort();
+        const chosen = el.kind.value;
+        el.kind.replaceChildren(
+          new Option("種類：すべて", ""),
+          ...found.map((ext) => new Option(ext, ext)),
+        );
+        el.kind.value = found.includes(chosen) ? chosen : "";
+      };
+
+      const fail = (error) => {
+        el.error.hidden = false;
+        el.error.replaceChildren();
+        const title = document.createElement("b");
+        title.textContent = `filer から読めませんでした（${error.message}）`;
+        const where = document.createElement("div");
+        where.innerHTML = "宛先: <code></code>";
+        where.querySelector("code").textContent = FILER;
+        const list = document.createElement("ul");
+        for (const line of [
+          "store が起きていないかもしれない（seaweedfs の repo で sh scripts/stack.sh up）",
+          "file:// で開いていて filer が別の宛先に居るなら ?filer=http://… を付ける",
+        ]) {
+          const li = document.createElement("li");
+          li.textContent = line;
+          list.append(li);
+        }
+        el.error.append(title, where, list);
+        el.msg.hidden = false;
+        el.msg.textContent = "—";
+      };
+
+      const load = async () => {
+        el.error.hidden = true;
+        el.msg.hidden = false;
+        el.msg.textContent = "読み込み中…";
+        try {
+          const { entries, version } = await listObjects(el.bucket.value);
+          state.rows = toRows(entries);
+          state.objects = entries.length;
+          el.where.textContent = `${FILER}${version ? `  ·  SeaweedFS ${version.split(" ")[1] ?? version}` : ""}`;
+          fillKinds();
+          render();
+        } catch (error) {
+          fail(error);
+        }
+      };
+
+      const start = async () => {
+        try {
+          const buckets = await listBuckets();
+          el.bucket.replaceChildren(...buckets.map((name) => new Option(name, name)));
+          const wanted = params.get("bucket");
+          if (wanted && buckets.includes(wanted)) el.bucket.value = wanted;
+          if (buckets.length === 0) throw new Error("bucket が 1 つも無い");
+          await load();
+        } catch (error) {
+          fail(error);
+        }
+      };
+
+      const sortBy = (column) => {
+        if (state.sort === column) {
+          state.desc = !state.desc;
+        } else {
+          state.sort = column;
+          state.desc = true;
+        }
+        render();
+      };
+
+      el.bucket.addEventListener("change", load);
+      el.reload.addEventListener("click", load);
+      el.q.addEventListener("input", render);
+      el.kind.addEventListener("change", render);
+      el.hideE2e.addEventListener("click", () => {
+        el.hideE2e.setAttribute("aria-pressed", el.hideE2e.getAttribute("aria-pressed") === "true" ? "false" : "true");
+        render();
+      });
+      el.sortAt.addEventListener("click", () => sortBy("at"));
+      el.sortSize.addEventListener("click", () => sortBy("size"));
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "/" && document.activeElement !== el.q) {
+          event.preventDefault();
+          el.q.focus();
+        }
+      });
+
+      start();
+    </script>
+  </body>
+</html>

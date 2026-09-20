@@ -31,6 +31,7 @@ export default defineConfig({
         { label: "Quickstart", translations: { ja: "クイックスタート" }, slug: "quickstart" },
         { label: "Configuration", translations: { ja: "設定" }, slug: "configuration" },
         { label: "Operations", translations: { ja: "運用" }, slug: "operations" },
+        { label: "Finding artifacts", translations: { ja: "成果物を探す" }, slug: "store-ui" },
         { label: "Upgrading", translations: { ja: "版を上げる" }, slug: "upgrading" },
         { label: "Consumers", translations: { ja: "消費者" }, slug: "consumers" },
       ],

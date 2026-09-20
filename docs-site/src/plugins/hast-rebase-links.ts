@@ -8,6 +8,11 @@
 //
 // フロントマター (hero.actions.link 等) はこの pipeline を通らない。木に来るのは
 // 本文だけなので、そちらは /seaweedfs/page/ と直接書く。
+//
+// **ja のページから英語版を指すときも同じように書く。** 注入には opt-out が無く、
+// /ja/ で始まらない絶対リンクは必ず /ja が付くので、ja のページに [English
+// version](/operations/) と書くと /seaweedfs/ja/operations/ —— 自分自身 —— になる
+// (ビルド後の HTML で実測)。base が付いたリンクだけがそのまま通る。
 import { fileURLToPath } from "node:url";
 import { defineHastPlugin } from "satteri";
 

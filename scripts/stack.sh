@@ -55,7 +55,14 @@ case "${SUBCOMMAND}" in
   up)
     preflight
     echo "共有 store を起こす (bucket は docker-compose.yml の S3_BUCKETS)"
-    exec container-compose up -d -b "$@"
+    # **exec で置き換えない。** 置き換えると、この下は 1 行も走らない。
+    container-compose up -d -b "$@"
+    # 中身を新しい順で見る画面を置き直す (filer の /ui/index.html)。起こすたびに
+    # 上書きするので、画面を直したら up し直せばそれで反映される。
+    #
+    # 失敗しても up は成功のまま終える —— store は画面が無くても本来の仕事をする。
+    # ここで落とすと「見るための飾りが無い」だけで store が使えなくなる。
+    sh scripts/ui.sh || echo "（画面は置けなかった。store は使える）" >&2
     ;;
   down)
     exec container-compose down "$@"
