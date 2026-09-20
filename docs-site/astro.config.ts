@@ -28,6 +28,11 @@ export default defineConfig({
       // 訳さないので、書かないと「英語の目次に日本語のページがぶら下がる」形になる。
       sidebar: [
         { label: "Overview", translations: { ja: "概要" }, slug: "index" },
+        { label: "Quickstart", translations: { ja: "クイックスタート" }, slug: "quickstart" },
+        { label: "Configuration", translations: { ja: "設定" }, slug: "configuration" },
+        { label: "Operations", translations: { ja: "運用" }, slug: "operations" },
+        { label: "Upgrading", translations: { ja: "版を上げる" }, slug: "upgrading" },
+        { label: "Consumers", translations: { ja: "消費者" }, slug: "consumers" },
       ],
     }),
   ],

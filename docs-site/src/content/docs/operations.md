@@ -1,8 +1,11 @@
-# SeaweedFS operations
+---
+title: Operations
+description: Emptying the bucket, looking inside, weed shell, and resetting the store.
+---
 
 Hands-on page for a store brought up with this repo's configuration. The Japanese version is
-[operations.ja.md](operations.ja.md). How to start the store and configure it is in the
-[README](../README.md); the design of the artifact store — pointing at an external S3, addressing
+[日本語版](/ja/operations/). How to start the store and configure it is in the
+[Quickstart](/quickstart/); the design of the artifact store — pointing at an external S3, addressing
 styles, what the region is for — lives in each consumer's own docs.
 
 The one you will reach for most is emptying the artifacts that pile up as you re-run captures.
@@ -24,9 +27,12 @@ The commands below take a `<bucket>` and an endpoint. Per consumer:
 | wacz-validator | `wacz-validator` | `http://seaweedfs.crawler-storage:8333` |
 
 **The keys are the bucket name** (both `accessKey` and `secretKey`). Identities are per bucket and
-cannot touch anything outside their own. For a throwaway store (a consumer's `--own-store`), read
-the endpoint as `http://seaweedfs.<project>:8333`, where `<project>` is that consumer's compose
-project name — which doubles as the DNS domain.
+cannot touch anything outside their own.
+
+There is **one store**, not one per repository: no consumer starts a store of its own any more.
+The only throwaway store is the one `scripts/verify.sh` brings up while checking a version, and it
+publishes to `http://127.0.0.1:18333` — read the endpoint as that when you point these commands at
+it.
 
 ```sh
 export AWS_ACCESS_KEY_ID=browserhive
