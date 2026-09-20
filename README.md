@@ -93,7 +93,7 @@ identity JSON を `printf` で組み立てているため (image に `jq` も `e
 
 ```sh
 sh scripts/wipe.sh <bucket> [endpoint] [aws の追加引数...]
-sh scripts/wipe.sh browserhive http://seaweedfs.browserhive:8333 --dryrun
+sh scripts/wipe.sh browserhive "" --dryrun   # endpoint を省くときも枠は空けて渡す
 ```
 
 全削除・中身の確認・`weed shell`・store ごとのリセット・困ったときの一覧は、

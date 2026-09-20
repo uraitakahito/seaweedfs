@@ -69,8 +69,8 @@ S3 API を話す相手なら何でもよいので、`s5cmd` や `mc` でも同�
 bucket は残したまま、中身だけ空にする。**開発中にいちばん使う操作。**
 
 ```sh
-sh scripts/wipe.sh browserhive                                    # 共有 store
-sh scripts/wipe.sh browserhive http://seaweedfs.browserhive:8333  # 使い捨ての store
+sh scripts/wipe.sh browserhive                          # 共有 store
+sh scripts/wipe.sh browserhive http://127.0.0.1:18333   # 使い捨ての store (verify.sh の既定の port)
 ```
 
 消えるのは成果物だけで、bucket も SeaweedFS の状態も残る。次の取り込みは何も作り直さずに
