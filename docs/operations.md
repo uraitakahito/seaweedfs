@@ -20,18 +20,18 @@ The commands below take a `<bucket>` and an endpoint. Per consumer:
 
 | Consumer | Bucket and keys | Endpoint |
 |---|---|---|
-| browserhive | `browserhive` | `http://seaweedfs.browserhive:8333` |
-| capture-ledger | `browserhive` (it reads what browserhive stored) | `http://seaweedfs.capture-ledger:8333` |
-| wacz-validator | `wacz-validator` | `http://seaweedfs.wacz-validator:8333` |
+| browserhive / capture-ledger | `browserhive` | `http://seaweedfs.crawler-storage:8333` |
+| wacz-validator | `wacz-validator` | `http://seaweedfs.crawler-storage:8333` |
 
-**The keys are the bucket name** (both `accessKey` and `secretKey`). The `<project>` in
-`seaweedfs.<project>` is the compose project name, which doubles as the DNS domain — each consumer
-runs its own store, so the endpoint changes with the repo.
+**The keys are the bucket name** (both `accessKey` and `secretKey`). Identities are per bucket and
+cannot touch anything outside their own. For a throwaway store (a consumer's `--own-store`), read
+the endpoint as `http://seaweedfs.<project>:8333`, where `<project>` is that consumer's compose
+project name — which doubles as the DNS domain.
 
 ```sh
 export AWS_ACCESS_KEY_ID=browserhive
 export AWS_SECRET_ACCESS_KEY=browserhive
-export AWS_ENDPOINT_URL_S3=http://seaweedfs.browserhive:8333
+export AWS_ENDPOINT_URL_S3=http://seaweedfs.crawler-storage:8333
 export AWS_REGION=us-east-1
 ```
 
@@ -61,9 +61,9 @@ The store runs master, volume, filer, and S3 in one process. Two ports are reach
 | S3 API | `:8333` | the `aws` CLI. **Normally this one** |
 | Filer | `:8888` | browsing the contents |
 
-Whether they are published depends on the consumer (capture-ledger and wacz-validator also put them
-on `127.0.0.1`; browserhive does not). **Publishing is not required** — the platform DNS name
-resolves from the host too, so one name is enough.
+The shared store also publishes `8333`, `8888` and `9333` on `127.0.0.1`, so `http://127.0.0.1:8333`
+reaches the same place. **Throwaway stores publish nothing** — the platform DNS name resolves from
+the host too, so there is nothing to expose and no port to collide.
 
 ## Delete every file
 
@@ -71,8 +71,8 @@ Empty the bucket while keeping the bucket itself. **The operation you will use m
 development.**
 
 ```sh
-sh scripts/wipe.sh browserhive http://seaweedfs.browserhive:8333
-sh scripts/wipe.sh wacz-validator http://seaweedfs.wacz-validator:8333
+sh scripts/wipe.sh browserhive                                   # the shared store
+sh scripts/wipe.sh browserhive http://seaweedfs.browserhive:8333 # a throwaway store
 ```
 
 Only the artifacts go; the bucket and SeaweedFS's own state stay. The next capture writes straight
@@ -80,7 +80,7 @@ into it with nothing to recreate. To see what would go without going through wit
 `--dryrun` (extra arguments are passed to `aws`).
 
 ```sh
-sh scripts/wipe.sh browserhive http://seaweedfs.browserhive:8333 --dryrun
+sh scripts/wipe.sh browserhive "" --dryrun
 ```
 
 Spelled out by hand:
@@ -119,17 +119,17 @@ aws s3 cp s3://browserhive/<key>.wacz ./out.wacz
 For browsing, the filer is quicker.
 
 ```
-http://seaweedfs.browserhive:8888/buckets/browserhive/
+http://seaweedfs.crawler-storage:8888/buckets/browserhive/
 ```
 
 ## weed shell — SeaweedFS's own CLI
 
 What the S3 API cannot show you — filer metadata, actual disk usage — comes from `weed shell`. It is
-an interactive shell, but piping into it works for one-offs. The container name is
-`seaweedfs.<project>` (`seaweedfs.browserhive`, for example).
+an interactive shell, but piping into it works for one-offs. The shared store's container is
+`seaweedfs.crawler-storage`.
 
 ```sh
-printf 'fs.du /buckets/browserhive\n' | container exec -i seaweedfs.browserhive weed shell
+printf 'fs.du /buckets/browserhive\n' | container exec -i seaweedfs.crawler-storage weed shell
 ```
 
 The useful ones:
@@ -153,10 +153,10 @@ credentials, a bucket that never got created. **Not for routine cleanup**; `wipe
 that.
 
 ```sh
-pnpm run stack:down                            # in the consumer's repo
-container rm seaweedfs.<project>
-container volume rm <project>_seaweedfs-data   # confirm the name with container volume ls
-pnpm run stack:up
+sh scripts/stack.sh down
+container rm seaweedfs.crawler-storage
+container volume rm crawler-storage_seaweedfs-data   # confirm the name with container volume ls
+sh scripts/stack.sh up
 ```
 
 `down` stops the containers but does not remove them, and a volume that a stopped container still
@@ -174,9 +174,9 @@ database too.
 
 | Symptom | Where to look |
 |---|---|
-| `aws` gets connection refused | is the store up (`seaweedfs.<project>` in `container ls`) |
-| `403` | do the keys match the bucket name (`S3_ACCESS_KEY_ID` and `S3_BUCKET`)? |
+| `aws` gets connection refused | is the store up (`seaweedfs.crawler-storage` in `container ls`)? `sh scripts/stack.sh up` |
+| `403` | do the keys match the bucket name? Identities are per bucket and cannot reach another one |
 | `NoSuchBucket` | the entrypoint has not finished creating it; wait on `aws s3 ls` |
 | Buckets you do not recognise | the endpoint is not taking effect — you are looking at the real AWS. Suspect `AWS_PROFILE` too |
 | Deleting does not free space | read `fs.du`, not `s3.bucket.list` |
-| Anonymous read gets 403 | was the store started with `S3_ANONYMOUS_READ=true`? (listing is always 403 for anonymous) |
+| Anonymous read gets 403 | is that bucket in `S3_ANONYMOUS_READ_BUCKETS`? (listing is always 403 for anonymous) |

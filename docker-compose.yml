@@ -1,16 +1,28 @@
-# SeaweedFS を単体で立てるための compose。
+# 共有の SeaweedFS。**crawler の store はこれ 1 つ**で、browserhive / capture-ledger /
+# wacz-validator はここを見る。動かすのは container-compose
+# (https://github.com/Mcrich23/Container-Compose —— Homebrew で入れる)。
 #
-# **これが原本**。消費者 (browserhive / capture-ledger / wacz-validator) はこの service
-# ブロックを写して使う —— container-compose は include: も extends: も使えないので、
-# 共有する手段が無い。写しの image の版がこことずれると、各消費者の check が
-# scripts/check-pin.sh で落とす。
+#   sh scripts/stack.sh up     # 立てる (道具と DNS ドメインを確かめてから)
+#   sh scripts/stack.sh down   # 畳む。volume (とその中身) は残る
 #
-#   container-compose up -d          # 立てる
-#   container-compose down           # 畳む
+# マシンごとに 1 度だけ要る用意 (project 名と同じ DNS ドメイン):
+#   sudo container system dns create crawler-storage
 #
-# 設定は env だけで決まる (etc/entrypoint.sh の冒頭を参照)。ここは既定の見本で、
-# 消費者はそれぞれの bucket 名と、必要なら S3_ANONYMOUS_READ を渡す。
-name: seaweedfs
+# これで、コンテナからも host からも seaweedfs.crawler-storage:8333 で届く。**消費者の
+# compose に seaweedfs の service を置かない** —— 置くと repo ごとに store が増え、名前も
+# volume も port も分かれる。使い捨ての store が要る場面 (browserhive の e2e) だけ、消費者が
+# 自分の project の中に profiles: ["storage"] として立てる。そのときも設定はここから mount する。
+#
+# 設定は env だけで決まる (etc/entrypoint.sh の冒頭)。bucket ごとに identity が 1 つでき、
+# 鍵は bucket 名と同じ。actions は bucket で絞ってあるので、ある消費者の鍵で別の消費者の
+# bucket は触れない。
+#
+# 操作 (全削除・中身を見る・リセット) は docs/operations.ja.md に 1 つだけ置いてある。
+
+# project 名が、そのまま DNS ドメインになる (`container system dns create` で作った名前と
+# 一致していなければならない)。**この名前は消費者の docs に書かれている** ので、変えるときは
+# scripts/check-store-name.sh が見ている綴りも一緒に動かすこと。
+name: crawler-storage
 
 services:
   seaweedfs:
@@ -21,13 +33,16 @@ services:
     # べき使い捨ての init コンテナは、別に存在しない。
     entrypoint: ["/etc/seaweedfs/entrypoint.sh"]
     environment:
-      - S3_ACCESS_KEY_ID=seaweedfs
-      - S3_SECRET_ACCESS_KEY=seaweedfs
-      - S3_BUCKET=seaweedfs
-    # 8333 が S3 API、8888 が filer の UI。host 側の道具のために publish する。
+      # 消費者の bucket を全部ここに並べる。鍵は bucket 名と同じ。
+      - S3_BUCKETS=browserhive,wacz-validator
+      # 匿名 Read は replay (browserhive の nginx 1 枚) のために browserhive だけ。
+      - S3_ANONYMOUS_READ_BUCKETS=browserhive
+    # 8333 が S3 API、8888 が filer の UI、9333 が master (起動待ちの検査が叩く)。
+    # **publish するのはこの 1 か所だけ** —— 消費者は publish しないので、port は衝突しない。
     ports:
       - "127.0.0.1:8333:8333"
       - "127.0.0.1:8888:8888"
+      - "127.0.0.1:9333:9333"
     volumes:
       # read-only で mount する。設定は /tmp に書き出されるので、これで足りる。
       - ./etc:/etc/seaweedfs:ro

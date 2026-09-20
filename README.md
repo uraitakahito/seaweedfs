@@ -1,6 +1,7 @@
 # seaweedfs
 
-crawler の各 repo が共有する SeaweedFS の起動設定。**submodule として使う**。
+crawler の各 repo が共有する SeaweedFS。**store は 1 つだけ立て、3 つの repo がそれを見る。**
+設定は submodule として配り、起動もここから行う。
 
 公式 image (`docker.io/chrislusf/seaweedfs`) をそのまま使い、entrypoint と bucket の
 初期化だけをここが持つ。image は焼かない。
@@ -18,28 +19,44 @@ crawler の各 repo が共有する SeaweedFS の起動設定。**submodule と�
 
 ## 使い方
 
-単体で立てる:
+マシンごとに 1 度だけ（project 名と同じ DNS ドメインを作る）:
 
 ```sh
-container-compose up -d
-container-compose down
+sudo container system dns create crawler-storage
 ```
 
-submodule として使う場合は、`docker-compose.yml` の service ブロックを**写す**。
-`container-compose` は `include:` も `extends:` も使えないので、共有する手段が無い
-(実測: どちらもデコードに失敗する)。写しの image の版がずれたら落ちるように、消費者は
-自分の check で `scripts/check-pin.sh` を走らせる（下の「消費者」）。
+立てる。submodule の中からでも同じ store が立つ（project 名も volume も同じ）ので、
+消費者の repo から出なくてよい:
+
+```sh
+sh scripts/stack.sh up      # または  sh .upstream/seaweedfs/scripts/stack.sh up
+sh scripts/stack.sh down
+```
+
+宛先は 1 つ。**コンテナからも host からも同じ綴りで引ける。**
+
+```
+http://seaweedfs.crawler-storage:8333          S3 API（127.0.0.1:8333 でも届く）
+http://seaweedfs.crawler-storage:8888/buckets/ filer の画面
+```
+
+### 使い捨ての store を立てたいとき
+
+e2e のように「他と混ざらない store」が要る場面では、消費者が自分の project の中に
+`profiles: ["storage"]` として立てる。`container-compose` は `include:` も `extends:` も
+使えない（実測: どちらもデコードに失敗する）ので、service ブロックは**写す**。写しの
+image の版がずれたら落ちるように、消費者は自分の check で `scripts/check-pin.sh` を走らせる。
 
 ```yaml
   seaweedfs:
+    profiles: ["storage"]                    # 既定では起きない（日常は共有 store）
     image: docker.io/chrislusf/seaweedfs:4.46
     entrypoint: ["/etc/seaweedfs/entrypoint.sh"]
     environment:
-      - S3_ACCESS_KEY_ID=myapp
-      - S3_SECRET_ACCESS_KEY=myapp
-      - S3_BUCKET=myapp
+      - S3_BUCKETS=myapp
+      - S3_ANONYMOUS_READ_BUCKETS=myapp      # 匿名 Read が要るときだけ
     volumes:
-      - ./seaweedfs/etc:/etc/seaweedfs:ro   # submodule の置き場所に合わせる
+      - ./seaweedfs/etc:/etc/seaweedfs:ro    # submodule の置き場所に合わせる
       - seaweedfs-data:/data
 ```
 
@@ -47,23 +64,26 @@ submodule として使う場合は、`docker-compose.yml` の service ブロッ�
 
 | env | 必須 | 既定 | 効果 |
 |---|---|---|---|
-| `S3_ACCESS_KEY_ID` | ✓ | — | identity の accessKey |
-| `S3_SECRET_ACCESS_KEY` | ✓ | — | secretKey |
-| `S3_BUCKET` | ✓ | — | 作る bucket。identity 名も兼ねる |
-| `S3_ANONYMOUS_READ` | | `false` | `true` で `anonymous` に `Read:$S3_BUCKET` を与える |
-| `S3_INIT_ATTEMPTS` | | `30` | bucket 作成のリトライ回数 |
+| `S3_BUCKETS` | ✓ | — | 作る bucket をカンマ区切りで。**identity 名も鍵も同じ綴り** |
+| `S3_ANONYMOUS_READ_BUCKETS` | | （無し） | 匿名に `Read:<bucket>` を与える bucket をカンマ区切りで |
+| `S3_INIT_ATTEMPTS` | | `30` | bucket 作成のリトライ回数（bucket ごと） |
 
-`S3_ANONYMOUS_READ` は、資格情報を持てない読み手のためにある。browserhive の replay
+**鍵は bucket 名と同じ。** 1 つの store を複数の消費者が使うので、identity は bucket ごとに
+分かれ、`actions` は bucket で絞ってある（`Read:<bucket>` の形）。絞らないと、ある消費者の
+鍵で別の消費者の bucket まで触れる —— `scripts/verify.sh` がその 4 つを実物で確かめる
+（他人の bucket は一覧が `AccessDenied`、取得と書き込みが不可、自分の bucket には書ける）。
+
+`S3_ANONYMOUS_READ_BUCKETS` は、資格情報を持てない読み手のためにある。browserhive の replay
 サービス (nginx 1 枚で S3 の署名をしない) がブラウザに `/wacz/<key>` を素通しさせる
 のに使う。**この穴は広げても何も言わない**ので、与えるのは `Read` だけ。輪郭は
 `scripts/verify.sh` が実物で確かめる:
 
 ```
-S3_ANONYMOUS_READ=true      GET 200 / Range GET 206 / 一覧 403 / PUT 403 / DELETE 403 / 別 bucket 403
-S3_ANONYMOUS_READ 未指定     GET 403
+匿名を与えた bucket    GET 200 / Range GET 206 / 一覧 403 / PUT 403 / DELETE 403 / 別 bucket 403
+与えていない bucket    GET 403
 ```
 
-`S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_BUCKET` の値に `"` と `\` は使えない。
+bucket 名に `"` と `\` は使えない。
 identity JSON を `printf` で組み立てているため (image に `jq` も `envsubst` も無い)。
 そのまま通すと「資格情報が違う」形の静かな失敗になるので、起動時に FATAL で落とす。
 
@@ -110,8 +130,12 @@ sh scripts/wipe.sh browserhive http://seaweedfs.browserhive:8333 --dryrun
 
 ## 消費者
 
-| repo | 置き場所 | 版のずれを見る検査 | 特記 |
-|---|---|---|---|
-| browserhive | `seaweedfs/` | `pnpm run lint:seaweedfs-pin` | `S3_ANONYMOUS_READ=true` (replay が読む) |
-| capture-ledger | `.upstream/seaweedfs/` | `pnpm run check:seaweedfs-pin` | bucket 名は `browserhive`（browserhive が置いたものを読む）。署名付き URL を発行する |
-| wacz-validator | `seaweedfs/` | `pnpm run check:seaweedfs-pin` | `S3_INIT_ATTEMPTS=10`。匿名 Read は使わない |
+| repo | 置き場所 | bucket | 検査 | 特記 |
+|---|---|---|---|---|
+| browserhive | `seaweedfs/` | `browserhive` | `lint:seaweedfs-pin`・`lint:store-name` | e2e だけ `--own-store` で使い捨ての store を立てる |
+| capture-ledger | `.upstream/seaweedfs/` | `browserhive` | `check:seaweedfs-pin`・`check:store-name` | browserhive が置いたものを読む。署名付き URL を発行する |
+| wacz-validator | `seaweedfs/` | `wacz-validator` | `check:seaweedfs-pin`・`check:store-name` | 匿名 Read は使わない。店が要る試験は無い（人が触るだけ） |
+
+共有 store の bucket は `docker-compose.yml` の `S3_BUCKETS` に並べる。消費者が増えたら、
+そこに 1 語足す。`scripts/check-store-name.sh` は、消費者の repo に `seaweedfs.<自分の
+project 名>` が残っていないかを見る（自前の store を指すのが正しい場所だけ、引数で除外する）。

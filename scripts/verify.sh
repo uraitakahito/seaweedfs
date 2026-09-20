@@ -20,6 +20,8 @@ tag="${1:-$(grep -Eo 'chrislusf/seaweedfs:[^"[:space:]]+' "$here/docker-compose.
 port="${VERIFY_PORT:-18333}"
 name="seaweedfs-verify-$(printf '%s' "$tag" | tr -c 'A-Za-z0-9' '-')"
 bucket=verify
+# 2 つ目の bucket。**共有 store の要**は「ある消費者の鍵で、他人の bucket を触れないこと」。
+other=verify-other
 work="$(mktemp -d)"
 failed=0
 
@@ -27,7 +29,10 @@ for tool in container aws curl; do
   command -v "$tool" >/dev/null 2>&1 || { echo "verify.sh: $tool が見つからない" >&2; exit 2; }
 done
 
-export AWS_ACCESS_KEY_ID=verify AWS_SECRET_ACCESS_KEY=verify AWS_REGION=us-east-1
+# 鍵は bucket 名と同じ (entrypoint.sh の約束)。
+export AWS_ACCESS_KEY_ID="$bucket" AWS_SECRET_ACCESS_KEY="$bucket" AWS_REGION=us-east-1
+# AWS_PROFILE が設定されていると、上の環境変数より静かに勝つ。
+unset AWS_PROFILE || true
 export AWS_ENDPOINT_URL="http://127.0.0.1:$port"
 s3="$AWS_ENDPOINT_URL"
 
@@ -47,14 +52,15 @@ expect() {
   fi
 }
 
-# 引数は S3_ANONYMOUS_READ の値。消費者の 2 つの形 (browserhive / capture-ledger は true、
-# wacz-validator は未指定) を両方確かめる。
+# 引数は匿名 Read を与える bucket の一覧 (空なら与えない)。消費者の 2 つの形
+# (browserhive / capture-ledger は与える、wacz-validator は与えない) を両方確かめる。
+# bucket は常に 2 つ作る —— 1 つでは「他人の bucket に触れない」を確かめられない。
 start() {
   discard
   container volume create "$name-data" >/dev/null
   container run -d --name "$name" -p "127.0.0.1:$port:8333" \
-    -e S3_ACCESS_KEY_ID=verify -e S3_SECRET_ACCESS_KEY=verify -e "S3_BUCKET=$bucket" \
-    -e "S3_ANONYMOUS_READ=$1" \
+    -e "S3_BUCKETS=$bucket,$other" \
+    -e "S3_ANONYMOUS_READ_BUCKETS=$1" \
     -v "$here/etc:/etc/seaweedfs:ro" -v "$name-data:/data" \
     --entrypoint /etc/seaweedfs/entrypoint.sh \
     "docker.io/chrislusf/seaweedfs:$tag" >/dev/null 2>&1
@@ -104,8 +110,8 @@ repeat() {
 printf 'hello' > "$work/obj.txt"
 echo "chrislusf/seaweedfs:$tag"
 
-echo "── 匿名 Read を与えた形 (S3_ANONYMOUS_READ=true)"
-start true
+echo "── 匿名 Read を与えた形 (S3_ANONYMOUS_READ_BUCKETS=$bucket)"
+start "$bucket"
 wait_ready
 expect "資格情報で PUT" ok "$(put a/obj.txt)"
 expect "資格情報で GET" hello "$(aws s3 cp "s3://$bucket/a/obj.txt" - 2>/dev/null || true)"
@@ -115,10 +121,22 @@ expect "匿名 Range GET" 206 "$(anon GET "$bucket/a/obj.txt" -H 'Range: bytes=0
 expect "匿名 一覧" 403 "$(anon GET "$bucket/")"
 expect "匿名 書き" 403 "$(anon PUT "$bucket/anon.txt" --data-binary x)"
 expect "匿名 消し" 403 "$(anon DELETE "$bucket/a/obj.txt")"
-expect "匿名 別 bucket" 403 "$(anon GET other/x)"
+expect "匿名 別 bucket" 403 "$(anon GET "$other/x")"
 expect "匿名で消そうとした後も残る" hello "$(aws s3 cp "s3://$bucket/a/obj.txt" - 2>/dev/null || true)"
 expect "誤った秘密鍵で署名した GET" SignatureDoesNotMatch \
   "$(AWS_SECRET_ACCESS_KEY=definitely-not-the-key aws s3api get-object --bucket "$bucket" --key a/obj.txt "$work/out" 2>&1 | grep -o SignatureDoesNotMatch | head -n 1 || true)"
+# **bucket の分離。** 共有 store では、これが崩れると 1 つの鍵で全部が見える。
+expect "他人の bucket を一覧" AccessDenied \
+  "$(aws s3 ls "s3://$other/" 2>&1 | grep -o AccessDenied | head -n 1 || true)"
+expect "他人の bucket に書く" no \
+  "$(aws s3 cp "$work/obj.txt" "s3://$other/x.txt" >/dev/null 2>&1 && echo ok || echo no)"
+expect "他人の鍵で自分の bucket を読む" no \
+  "$(AWS_ACCESS_KEY_ID="$other" AWS_SECRET_ACCESS_KEY="$other" \
+     aws s3 cp "s3://$bucket/a/obj.txt" - >/dev/null 2>&1 && echo ok || echo no)"
+expect "他人の鍵で自分の bucket には書ける" ok \
+  "$(AWS_ACCESS_KEY_ID="$other" AWS_SECRET_ACCESS_KEY="$other" \
+     aws s3 cp "$work/obj.txt" "s3://$other/own.txt" >/dev/null 2>&1 && echo ok || echo no)"
+
 url="$(aws s3 presign "s3://$bucket/a/obj.txt" --expires-in 120 2>/dev/null || true)"
 expect "署名付き URL で GET" 200 "$(curl -s -o /dev/null -w '%{http_code}' -m 10 "$url")"
 
@@ -138,8 +156,8 @@ wait_ready
 expect "空にして再起動: 書き込み対象から外れたボリューム" 0 "$(container logs "$name" 2>&1 | grep -c 'remove from writable' || true)"
 expect "空にして再起動: その後の PUT" ok "$(put after-restart.txt)"
 
-echo "── 匿名 Read を与えない形 (S3_ANONYMOUS_READ=false)"
-start false
+echo "── 匿名 Read を与えない形 (S3_ANONYMOUS_READ_BUCKETS 未指定)"
+start ""
 wait_ready
 expect "資格情報で PUT" ok "$(put a/obj.txt)"
 expect "匿名 GET" 403 "$(anon GET "$bucket/a/obj.txt")"
