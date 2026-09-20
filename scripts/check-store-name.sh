@@ -24,6 +24,11 @@ shift
 # DNS のラベル (英小文字・数字・ハイフン)。
 pattern='seaweedfs\.[a-z0-9][a-z0-9-]*'
 
+# **ホスト名ではないもの。** `seaweedfs.` の後ろにはファイル名や repo の URL も来る ——
+# `.gitmodules` の `uraitakahito/seaweedfs.git`、docs の `seaweedfs.md` など。拡張子で外す。
+# (同じ行にホスト名とファイル名が両方あると、その行ごと見逃す。稀なので、そこは許す。)
+not_host='seaweedfs\.(git|md|mdx|sh|ts|tsx|js|mjs|cjs|json|ya?ml|png|svg|txt|html|lock)([^a-z0-9-]|$)'
+
 excluded() {
   for path in "$@"; do
     [ "$path" = "$candidate" ] && return 0
@@ -37,7 +42,9 @@ for file in $(git ls-files); do
   candidate="$file"
   excluded "$@" && continue
   # -I で binary を飛ばす。見つからなければ grep は 1 を返すので、set -e の下では || true。
-  hits="$(grep -InE "$pattern" "$file" 2>/dev/null | grep -vE "seaweedfs\.${shared}([^a-z0-9-]|$)" || true)"
+  hits="$(grep -InE "$pattern" "$file" 2>/dev/null \
+    | grep -vE "seaweedfs\.${shared}([^a-z0-9-]|$)" \
+    | grep -vE "$not_host" || true)"
   [ -z "$hits" ] && continue
   echo "$hits" | while IFS= read -r line; do
     echo "  $file:$line"
