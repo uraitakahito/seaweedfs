@@ -1,0 +1,59 @@
+name: site
+
+# docs-site の検査。**公開はしない。**
+#
+# `astro build` だけでは守りにならない —— `.md` のページは中で何が落ちても Starlight の
+# docs loader が握り潰して exit 0 になる。だから build の前に scripts/check-doc-refs.sh
+# (en/ja の対・repo のパス・版の見本) を必ず通す。
+#
+# fork の PR でも安全に走らせられるように、ここには deploy を置かない
+# (permissions は contents: read だけ)。公開は docs.yml が main でだけ行う。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs-site/**'
+      - 'scripts/**'
+      - 'etc/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/site.yml'
+  pull_request:
+    paths:
+      - 'docs-site/**'
+      - 'scripts/**'
+      - 'etc/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/site.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Docs sync guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      # この repo で Node が要るのは docs-site だけ。root に package.json は無い。
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: docs-site/package-lock.json
+
+      - name: Install docs-site dependencies
+        run: npm ci --prefix docs-site
+
+      - name: docs の参照
+        run: sh scripts/check-doc-refs.sh
+
+      - name: Build site
+        run: npm --prefix docs-site run build

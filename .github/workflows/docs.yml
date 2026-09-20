@@ -1,0 +1,66 @@
+name: docs
+
+# docs-site/ を GitHub Pages に出す。
+#
+#   /seaweedfs/      → English
+#   /seaweedfs/ja/   → 日本語
+#
+# **main でだけ走らせる。** fork のブランチをここで build すると、その fork が
+# 公開される中身を選べてしまう。PR の検査は site.yml (deploy を持たない) が見る。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs-site/**'
+      - 'scripts/**'
+      - 'etc/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 1 度に 1 つ。cancel-in-progress にしない —— 公開物の途中で止まった deploy は、
+# 待たされるより高くつく。
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: docs-site/package-lock.json
+
+      - name: Install docs-site dependencies
+        run: npm ci --prefix docs-site
+
+      # build の前に落とす。build は `.md` では守りにならない (site.yml の註を参照)。
+      - name: docs の参照
+        run: sh scripts/check-doc-refs.sh
+
+      - name: Build site
+        run: npm --prefix docs-site run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs-site/dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v5
