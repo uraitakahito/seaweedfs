@@ -67,6 +67,25 @@ S3_ANONYMOUS_READ 未指定     GET 403
 identity JSON を `printf` で組み立てているため (image に `jq` も `envsubst` も無い)。
 そのまま通すと「資格情報が違う」形の静かな失敗になるので、起動時に FATAL で落とす。
 
+## 運用（消す・見る）
+
+開発中にいちばん使うのは、溜まった成果物を消すこと。**bucket は残したまま中身だけ空にする。**
+
+```sh
+sh scripts/wipe.sh <bucket> [endpoint] [aws の追加引数...]
+sh scripts/wipe.sh browserhive http://seaweedfs.browserhive:8333 --dryrun
+```
+
+全削除・中身の確認・`weed shell`・store ごとのリセット・困ったときの一覧は、
+**消費者の repo ではなくここに 1 つだけ**置いてある:
+
+- [docs/operations.ja.md](docs/operations.ja.md)（日本語）
+- [docs/operations.md](docs/operations.md)（English）
+
+以前は browserhive の docs にだけ在り、capture-ledger には手順が無く、wacz-validator には
+「volume も消す」の 1 行しか無かった。store は 3 つの repo が同じ設定で立てているので、
+**触り方も 1 か所に置く。**
+
 ## 版を上げる
 
 版の正は `docker-compose.yml` の image の 1 行だけ。README の見本は CI が
