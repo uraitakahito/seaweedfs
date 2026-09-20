@@ -19,18 +19,18 @@ sh scripts/wipe.sh <bucket>
 
 | 消費者 | bucket と鍵 | 宛先 |
 |---|---|---|
-| browserhive | `browserhive` | `http://seaweedfs.browserhive:8333` |
-| capture-ledger | `browserhive`（browserhive が置いたものを読む） | `http://seaweedfs.capture-ledger:8333` |
-| wacz-validator | `wacz-validator` | `http://seaweedfs.wacz-validator:8333` |
+| browserhive / capture-ledger | `browserhive` | `http://seaweedfs.crawler-storage:8333` |
+| wacz-validator | `wacz-validator` | `http://seaweedfs.crawler-storage:8333` |
 
-**鍵は bucket 名と同じ**（`accessKey` も `secretKey` も）。宛先の `seaweedfs.<project>` の
-`<project>` は compose の project 名で、そのまま DNS ドメインになる —— store は消費者ごとに
-1 つずつ立っているので、repo が変われば宛先も変わる。
+**鍵は bucket 名と同じ**（`accessKey` も `secretKey` も）。identity は bucket ごとに分かれて
+いて、自分の bucket の外は触れない。使い捨ての store（消費者の `--own-store`）を見るときは、
+宛先だけ `http://seaweedfs.<project>:8333` に読み替える —— `<project>` は消費者の compose の
+project 名で、そのまま DNS ドメインになる。
 
 ```sh
 export AWS_ACCESS_KEY_ID=browserhive
 export AWS_SECRET_ACCESS_KEY=browserhive
-export AWS_ENDPOINT_URL_S3=http://seaweedfs.browserhive:8333
+export AWS_ENDPOINT_URL_S3=http://seaweedfs.crawler-storage:8333
 export AWS_REGION=us-east-1
 ```
 
@@ -60,24 +60,24 @@ S3 API を話す相手なら何でもよいので、`s5cmd` や `mc` でも同�
 | S3 API | `:8333` | `aws` CLI。**普段はこちら** |
 | Filer | `:8888` | ブラウザで中身を見る |
 
-publish するかは消費者による（capture-ledger と wacz-validator は `127.0.0.1` にも出していて、
-browserhive は出していない）。**publish は必須ではない** —— プラットフォームの DNS 名は
-host からも引けるので、名前 1 つで足りる。
+共有 store は `127.0.0.1` にも publish している（`8333`・`8888`・`9333`）ので、
+`http://127.0.0.1:8333` でも同じ所に届く。**使い捨ての store は publish しない** ——
+プラットフォームの DNS 名は host からも引けるので、出す必要が無く、port も衝突しない。
 
 ## 全ファイルを削除する
 
 bucket は残したまま、中身だけ空にする。**開発中にいちばん使う操作。**
 
 ```sh
-sh scripts/wipe.sh browserhive http://seaweedfs.browserhive:8333
-sh scripts/wipe.sh wacz-validator http://seaweedfs.wacz-validator:8333
+sh scripts/wipe.sh browserhive                                    # 共有 store
+sh scripts/wipe.sh browserhive http://seaweedfs.browserhive:8333  # 使い捨ての store
 ```
 
 消えるのは成果物だけで、bucket も SeaweedFS の状態も残る。次の取り込みは何も作り直さずに
 そのまま書ける。消す前に何が消えるか見たいときは `--dryrun` を足す（`aws` にそのまま渡る）。
 
 ```sh
-sh scripts/wipe.sh browserhive http://seaweedfs.browserhive:8333 --dryrun
+sh scripts/wipe.sh browserhive "" --dryrun
 ```
 
 素で書くならこう。
@@ -116,17 +116,17 @@ aws s3 cp s3://browserhive/<key>.wacz ./out.wacz
 ブラウザで眺めるなら Filer が早い。
 
 ```
-http://seaweedfs.browserhive:8888/buckets/browserhive/
+http://seaweedfs.crawler-storage:8888/buckets/browserhive/
 ```
 
 ## weed shell —— SeaweedFS 自身の CLI
 
 S3 API では見えないもの（filer のメタデータ、実際のディスク使用量）は `weed shell` から見る。
-対話シェルだが、標準入力に流し込めば 1 行でも使える。コンテナの名前は `seaweedfs.<project>`
-（例: `seaweedfs.browserhive`）。
+対話シェルだが、標準入力に流し込めば 1 行でも使える。共有 store のコンテナの名前は
+`seaweedfs.crawler-storage`。
 
 ```sh
-printf 'fs.du /buckets/browserhive\n' | container exec -i seaweedfs.browserhive weed shell
+printf 'fs.du /buckets/browserhive\n' | container exec -i seaweedfs.crawler-storage weed shell
 ```
 
 よく使うもの:
@@ -149,10 +149,10 @@ printf 'fs.du /buckets/browserhive\n' | container exec -i seaweedfs.browserhive 
 作られないまま）に使う。**日常の掃除には使わない** —— 上の `wipe.sh` で足りる。
 
 ```sh
-pnpm run stack:down                                  # 消費者の repo で
-container rm seaweedfs.<project>
-container volume rm <project>_seaweedfs-data         # 正確な名前は container volume ls
-pnpm run stack:up
+sh scripts/stack.sh down
+container rm seaweedfs.crawler-storage
+container volume rm crawler-storage_seaweedfs-data   # 正確な名前は container volume ls
+sh scripts/stack.sh up
 ```
 
 `down` はコンテナを止めるだけで消さない。止まったコンテナが掴んでいる volume は消せない
@@ -169,9 +169,9 @@ replay が 404 を返す。store を作り直すときは、消費者側の DB �
 
 | 症状 | 見るところ |
 |---|---|
-| `aws` が接続を拒まれる | store が起動しているか（`container ls` に `seaweedfs.<project>`） |
-| `403` が返る | 鍵が bucket 名と揃っているか（`S3_ACCESS_KEY_ID` と `S3_BUCKET`） |
+| `aws` が接続を拒まれる | store が起動しているか（`container ls` に `seaweedfs.crawler-storage`）。`sh scripts/stack.sh up` |
+| `403` が返る | 鍵が bucket 名と揃っているか。identity は bucket ごとに分かれていて、他人の bucket は触れない |
 | `NoSuchBucket` | entrypoint の bucket 作成が終わっていない。`aws s3 ls` で待つ |
 | 見覚えのない bucket が並ぶ | 宛先が効いていない —— 本物の AWS を見ている。`AWS_PROFILE` も疑う |
 | 消したのに容量が減らない | `s3.bucket.list` ではなく `fs.du` を見る |
-| 匿名で読めるはずのものが 403 | その store が `S3_ANONYMOUS_READ=true` で立っているか（一覧は匿名では常に 403） |
+| 匿名で読めるはずのものが 403 | その bucket が `S3_ANONYMOUS_READ_BUCKETS` に入っているか（一覧は匿名では常に 403） |
