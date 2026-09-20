@@ -40,7 +40,9 @@ From the host, pick **the `127.0.0.1` one**. On macOS there are machines where a
 Apple-signed (node, grpcurl, aws) cannot reach the containers' subnet — there the DNS name does not
 get through.
 
-To look at the artifacts in a browser: `http://127.0.0.1:8888/buckets/browserhive/`.
+To find artifacts in a browser: `http://127.0.0.1:8888/ui/index.html` — it lists them
+**newest first**, so the one you just captured is at the top. See
+[Finding artifacts](/store-ui/).
 
 ## Buckets and keys
 

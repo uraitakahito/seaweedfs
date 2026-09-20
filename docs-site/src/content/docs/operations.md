@@ -122,11 +122,14 @@ aws s3 cp s3://browserhive/<key>.result.json - | jq .
 aws s3 cp s3://browserhive/<key>.wacz ./out.wacz
 ```
 
-For browsing, the filer is quicker.
+For finding something, [Finding artifacts](/store-ui/) is quicker. **It sorts newest first.**
 
 ```
-http://seaweedfs.crawler-storage:8888/buckets/browserhive/
+http://127.0.0.1:8888/ui/index.html
 ```
+
+The filer's plain listing (`http://127.0.0.1:8888/buckets/browserhive/`) **only comes back in
+name order**, which is the wrong tool for finding a recent capture.
 
 ## weed shell — SeaweedFS's own CLI
 
