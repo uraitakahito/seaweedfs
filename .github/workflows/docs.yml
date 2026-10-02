@@ -5,18 +5,16 @@ name: docs
 #   /seaweedfs/      → English
 #   /seaweedfs/ja/   → 日本語
 #
-# **main でだけ走らせる。** fork のブランチをここで build すると、その fork が
-# 公開される中身を選べてしまう。PR の検査は site.yml (deploy を持たない) が見る。
+# **リリースのタグ (v*) を push したときだけ走らせる。** 公開する docs は、出した版の docs にする。
+# main への push では走らせない —— main には、まだ出していない変更も入る。
+# fork のブランチは、ここでは build しない (その fork が、公開される中身を選べてしまう)。
+# PR の検査は site.yml (deploy を持たない) が見る。
+# github-pages の環境も、v* のタグからの deploy だけを許す。
+# 公開し直すときは、タグを指して起こす (gh workflow run docs.yml --ref vX.Y.Z)。
 
 on:
   push:
-    branches: [main]
-    paths:
-      - 'docs-site/**'
-      - 'scripts/**'
-      - 'etc/**'
-      - 'docker-compose.yml'
-      - '.github/workflows/docs.yml'
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
