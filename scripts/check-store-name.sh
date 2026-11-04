@@ -8,8 +8,11 @@
 #
 #   sh seaweedfs/scripts/check-store-name.sh crawler-storage
 #
-# 消費者の repo の根で走らせる。git が追っているテキストファイルだけを見る (submodule の
-# 中身は gitlink なので自動的に外れる)。
+# 消費者の repo の根で走らせる。見るのは git が repo の中身と見なすテキストファイル全部 ——
+# 追跡済みに加えて、まだ add していない新しいファイルも見る (ignore されているものは見ない)。
+# 追跡済みだけを見ていた頃は、新しいファイルに書いた綴りが手元の検査を素通りし、まっさらな
+# checkout から走る CI で、commit を push した後に初めて赤になった。submodule の中身は見ない
+# (git は submodule の中へ降りない)。
 #
 # **一致は行ではなく 1 件ずつ見る。** 最初の版は `grep -v` で**行を**落としていたので、
 # 共有の名前と古い名前が同じ行に並ぶと —— 「共有の名前に揃える。docs には repo ごとの名前が
@@ -34,20 +37,37 @@ pattern='seaweedfs\.[a-z0-9][a-z0-9-]*'
 # `-o` の出力は `<行番号>:<一致した文字列>` なので、末尾まで一致させれば取り違えない。
 not_host="^[0-9]+:seaweedfs\.(git|md|mdx|sh|ts|tsx|js|mjs|cjs|json|ya?ml|png|svg|txt|html|lock)$"
 
+# 一覧は -z (NUL 区切り) で受け取る。改行区切りの一覧は、git の既定 (core.quotepath=true。
+# CI の runner も) では ASCII でない名前を `"\346\227\245..."` のように引用符つきで出す。
+# 手元にそんな名前のファイルは無いので、下の [ -f ] が黙って飛ばしていた。`for file in $(…)`
+# は空白を含む名前も割っていた。
+#
+# bash なら `while IFS= read -r -d '' file; do …; done < <(git ls-files -z …)` と書くが、この
+# script は sh で呼ばれる (CI も消費者も `sh …/check-store-name.sh`。ubuntu の sh は dash)。
+# dash の read には -d が無く、process substitution も無い。パイプで while に渡すと while が
+# subshell で回り、problems の数が外へ出ない。だから NUL を改行に替え、here-document で渡す。
+# この形でも読めないのは改行を含む名前だけで、それは割れて黙って飛ぶ。
+files="$(git ls-files -z --cached --others --exclude-standard | tr '\0' '\n')"
+
 problems=0
-for file in $(git ls-files); do
+while IFS= read -r file; do
+  # 一覧には、消したがまだ追跡しているファイルや、submodule・入れ子の repo (ディレクトリ) も出る。
   [ -f "$file" ] || continue
   # -I で binary を飛ばす。見つからなければ grep は 1 を返すので、set -e の下では || true。
-  bad_lines="$(grep -IonE "$pattern" "$file" 2>/dev/null \
+  # 読むときは ./ を付ける —— - で始まる名前を option と読ませない (macOS の sed は -- を解さない)。
+  bad_lines="$(grep -IonE "$pattern" "./$file" 2>/dev/null \
     | grep -vE "^[0-9]+:seaweedfs\.${shared}$" \
     | grep -vE "$not_host" \
     | cut -d: -f1 | sort -un || true)"
   [ -z "$bad_lines" ] && continue
   problems=$((problems + 1))
   for n in $bad_lines; do
-    echo "  $file:$n: $(sed -n "${n}p" "$file")"
+    # echo は dash では \ を解するので、名前と行をそのまま出すために printf で。
+    printf '  %s:%s: %s\n' "$file" "$n" "$(sed -n "${n}p" "./$file")"
   done
-done
+done <<EOF
+$files
+EOF
 
 if [ "$problems" -gt 0 ]; then
   echo "" >&2
