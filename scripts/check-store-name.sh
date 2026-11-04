@@ -8,8 +8,11 @@
 #
 #   sh seaweedfs/scripts/check-store-name.sh crawler-storage
 #
-# 消費者の repo の根で走らせる。git が追っているテキストファイルだけを見る (submodule の
-# 中身は gitlink なので自動的に外れる)。
+# 消費者の repo の根で走らせる。見るのは git が repo の中身と見なすテキストファイル全部 ——
+# 追跡済みに加えて、まだ add していない新しいファイルも見る (ignore されているものは見ない)。
+# 追跡済みだけを見ていた頃は、新しいファイルに書いた綴りが手元の検査を素通りし、まっさらな
+# checkout から走る CI で、commit を push した後に初めて赤になった。submodule の中身は見ない
+# (git は submodule の中へ降りない)。
 #
 # **一致は行ではなく 1 件ずつ見る。** 最初の版は `grep -v` で**行を**落としていたので、
 # 共有の名前と古い名前が同じ行に並ぶと —— 「共有の名前に揃える。docs には repo ごとの名前が
@@ -35,7 +38,8 @@ pattern='seaweedfs\.[a-z0-9][a-z0-9-]*'
 not_host="^[0-9]+:seaweedfs\.(git|md|mdx|sh|ts|tsx|js|mjs|cjs|json|ya?ml|png|svg|txt|html|lock)$"
 
 problems=0
-for file in $(git ls-files); do
+for file in $(git ls-files --cached --others --exclude-standard); do
+  # 一覧には、消したがまだ追跡しているファイルや、submodule・入れ子の repo (ディレクトリ) も出る。
   [ -f "$file" ] || continue
   # -I で binary を飛ばす。見つからなければ grep は 1 を返すので、set -e の下では || true。
   bad_lines="$(grep -IonE "$pattern" "$file" 2>/dev/null \
