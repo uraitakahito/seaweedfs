@@ -13,7 +13,7 @@
 #     1 コンテナなので自分は困らないが、**消費者から seaweedfs.crawler-storage が引けなくなる**
 #     —— つまり「立っているのに誰も届かない」という、いちばん読みにくい形になる。
 #
-#   sh scripts/stack.sh up            # 起動 (-d -b は既定で付く)
+#   sh scripts/stack.sh up            # 起動 (-d -b は既定で付く)。S3 の口が答えるまで返らない
 #   sh scripts/stack.sh down          # 停止
 #
 # 余分な引数はそのまま container-compose へ渡る。down には点検を掛けない ——
@@ -26,6 +26,8 @@ SUBCOMMAND="${1:-up}"
 shift || true
 
 DOMAIN=crawler-storage
+S3_URL=http://127.0.0.1:8333/
+S3_WAIT_SECONDS=60
 
 preflight() {
   for cmd in container container-compose; do
@@ -51,18 +53,34 @@ preflight() {
   fi
 }
 
+# **起こした直後、S3 の口はまだ開いていない** (master の起動から約 12 秒。実測)。消費者は up が
+# 返った直後に使う —— capture-ledger の dev:up は、すぐ後の段で 8333 を確かめ、開いていなければ
+# 落ちる。だから up は、S3 が答えるまで返らない。
+#
+# 答えは状態の数字で見る。S3 は匿名に 403 を返すので、`curl -f` では立っていても失敗に見える。
+# **`|| true` を外さない。** 繋がらないときの curl の失敗で、`set -e` が script ごと終わらせる
+# (繋がらなければ curl は %{http_code} に 000 を書くので、判定は case に任せる)。
+wait_for_s3() {
+  deadline=$(($(date +%s) + S3_WAIT_SECONDS))
+  while [ "$(date +%s)" -lt "${deadline}" ]; do
+    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "${S3_URL}" || true)"
+    case "${code}" in
+      [1-5]??) return 0 ;;
+    esac
+    sleep 1
+  done
+  echo "エラー: S3 の口 (${S3_URL}) が ${S3_WAIT_SECONDS} 秒待っても開きません。" >&2
+  echo "container logs seaweedfs.${DOMAIN} を見てください。" >&2
+  exit 1
+}
+
 case "${SUBCOMMAND}" in
   up)
     preflight
     echo "共有 store を起こす (bucket は docker-compose.yml の S3_BUCKETS)"
     # **exec で置き換えない。** 置き換えると、この下は 1 行も走らない。
     container-compose up -d -b "$@"
-    # 中身を新しい順で見る画面を置き直す (filer の /ui/index.html)。起こすたびに
-    # 上書きするので、画面を直したら up し直せばそれで反映される。
-    #
-    # 失敗しても up は成功のまま終える —— store は画面が無くても本来の仕事をする。
-    # ここで落とすと「見るための飾りが無い」だけで store が使えなくなる。
-    sh scripts/ui.sh || echo "（画面は置けなかった。store は使える）" >&2
+    wait_for_s3
     ;;
   down)
     exec container-compose down "$@"

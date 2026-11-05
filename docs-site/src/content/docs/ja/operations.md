@@ -118,14 +118,22 @@ aws s3 cp s3://browserhive/<key>.result.json - | jq .
 aws s3 cp s3://browserhive/<key>.wacz ./out.wacz
 ```
 
-ブラウザで探すなら[成果物を探す](/ja/store-ui/)の画面が早い。**新しい順に並ぶ。**
+ブラウザで見るなら filer の一覧。**名前順にしか返らない**（S3 の一覧にも filer にも並べ替えの
+引数が無い）ので、日時で探すのには向かない。
 
 ```
-http://127.0.0.1:8888/ui/index.html
+http://127.0.0.1:8888/buckets/browserhive/
 ```
 
-filer の素の一覧（`http://127.0.0.1:8888/buckets/browserhive/`）は**名前順にしか
-返らない**ので、日時で探すのには向かない。
+さっき撮ったものを探すなら、filer の変更の記録を読む。古い順に出るので、いちばん下が新しい
+（消した物も `DELETE` の行で出る）。
+
+```sh
+container exec seaweedfs.crawler-storage weed filer.meta.scan -pathPrefix=/buckets/browserhive -timeAgo=1h
+```
+
+台帳に入った取り込みは、[dashboard](https://github.com/uraitakahito/dashboard)（crawler の開発用の
+Web アプリ）のアーカイブの画面に新しい順に並ぶ。
 
 ## weed shell —— SeaweedFS 自身の CLI
 

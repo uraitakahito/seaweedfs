@@ -122,14 +122,22 @@ aws s3 cp s3://browserhive/<key>.result.json - | jq .
 aws s3 cp s3://browserhive/<key>.wacz ./out.wacz
 ```
 
-For finding something, [Finding artifacts](/store-ui/) is quicker. **It sorts newest first.**
+In a browser, use the filer's listing. It **only comes back in name order** (neither the S3
+listing nor the filer has a sort argument), which is the wrong tool for finding a recent capture.
 
 ```
-http://127.0.0.1:8888/ui/index.html
+http://127.0.0.1:8888/buckets/browserhive/
 ```
 
-The filer's plain listing (`http://127.0.0.1:8888/buckets/browserhive/`) **only comes back in
-name order**, which is the wrong tool for finding a recent capture.
+To find what you just captured, read the filer's change log. It runs oldest first, so the newest
+is at the bottom (deleted objects show up as `DELETE` lines).
+
+```sh
+container exec seaweedfs.crawler-storage weed filer.meta.scan -pathPrefix=/buckets/browserhive -timeAgo=1h
+```
+
+Captures that made it into the ledger are listed newest first in the archives view of
+[dashboard](https://github.com/uraitakahito/dashboard), the crawler's development web app.
 
 ## weed shell — SeaweedFS's own CLI
 
