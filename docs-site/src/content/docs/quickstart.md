@@ -26,7 +26,7 @@ sh scripts/stack.sh down
 
 `stack.sh` looks at two things before it starts anything — whether `container` and
 `container-compose` are on PATH, and whether the DNS domain is registered. If either is missing it
-stops and names it.
+stops and names it. Once started, it waits for the S3 port to answer before it returns.
 
 ## Addresses
 
@@ -39,10 +39,6 @@ stops and names it.
 From the host, pick **the `127.0.0.1` one**. On macOS there are machines where a binary that is not
 Apple-signed (node, grpcurl, aws) cannot reach the containers' subnet — there the DNS name does not
 get through.
-
-To find artifacts in a browser: `http://127.0.0.1:8888/ui/index.html` — it lists them
-**newest first**, so the one you just captured is at the top. See
-[Finding artifacts](/store-ui/).
 
 ## Buckets and keys
 
