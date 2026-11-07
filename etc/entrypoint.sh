@@ -3,7 +3,7 @@
 # 設定を **その場で組み立てる**。
 #
 # テンプレートファイルを置いていないのは、identity の中身が配備ごとに違うため ——
-# browserhive は replay に読ませるための anonymous が要り、wacz-validator は要らない。
+# browserhive は replayweb-server に読ませるための anonymous が要り、wacz-validator は要らない。
 # ファイルにすると、その差を表す手段が「fork する」しか無くなる。実際そうなっていて、
 # 切り出す前は browserhive と wacz-validator (当時の waxlens) で 3 ファイルすべてが分岐していた。
 #
@@ -32,7 +32,7 @@ case "${S3_BUCKETS}${S3_ANONYMOUS_READ_BUCKETS:-}" in
     ;;
 esac
 
-# 匿名 Read を与える bucket。browserhive の replay サービスが、資格情報を持たずに /wacz/ を
+# 匿名 Read を与える bucket。replayweb-server が、資格情報を持たずに /wacz/ を
 # 読むために要る。**広げても何も言わない穴** なので、与えるのは Read だけ。一覧は与えない。
 anonymous_for() {
   for allowed in $(echo "${S3_ANONYMOUS_READ_BUCKETS:-}" | tr ',' ' '); do

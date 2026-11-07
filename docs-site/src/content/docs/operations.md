@@ -184,7 +184,7 @@ volume and the entrypoint recreates the buckets — `etc/init-bucket.sh` has a r
 for the master, so there is no ordering to arrange.
 
 **Deleting artifacts leaves the ledger rows that point at them.** Opening such a row from
-capture-ledger's picker gets a 404 from replay. When you recreate the store, recreate the consumer's
+capture-ledger's picker gets a 404 from replayweb-server. When you recreate the store, recreate the consumer's
 database too.
 
 ## When something is wrong

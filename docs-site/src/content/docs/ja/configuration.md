@@ -21,8 +21,8 @@ identity の JSON をその場で組み立てる —— fork する理由が無�
 
 ## 匿名 Read の輪郭
 
-`S3_ANONYMOUS_READ_BUCKETS` は、資格情報を持てない読み手のためにある。browserhive の replay
-サービス（nginx 1 枚で S3 の署名をしない）がブラウザに `/wacz/<key>` を素通しさせるのに使う。
+`S3_ANONYMOUS_READ_BUCKETS` は、資格情報を持てない読み手のためにある。
+[replayweb-server](https://github.com/uraitakahito/replayweb-server)（Node の小さな server で、S3 の署名をしない）がブラウザに `/wacz/<key>` を素通しさせるのに使う。
 **この穴は広げても何も言わない**ので、与えるのは `Read` だけ。輪郭は `scripts/verify.sh` が
 実物で確かめる:
 
