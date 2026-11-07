@@ -22,8 +22,9 @@ bucket (the `Read:<bucket>` form). Unscoped, one consumer's keys reach another c
 
 ## The shape of anonymous Read
 
-`S3_ANONYMOUS_READ_BUCKETS` is there for readers that cannot hold credentials. browserhive's replay
-service (a single nginx, which does not sign S3 requests) uses it to pass `/wacz/<key>` straight
+`S3_ANONYMOUS_READ_BUCKETS` is there for readers that cannot hold credentials.
+[replayweb-server](https://github.com/uraitakahito/replayweb-server) (a small Node server, which does
+not sign S3 requests) uses it to pass `/wacz/<key>` straight
 through to the browser. **Nothing says anything when this hole is widened**, so grant `Read` and
 nothing else. `scripts/verify.sh` checks the shape against a real store:
 

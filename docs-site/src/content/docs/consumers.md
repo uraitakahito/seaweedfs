@@ -8,7 +8,7 @@ the same one.
 
 | repo | Where it sits | bucket | Anonymous Read | Guard |
 |---|---|---|---|---|
-| [BrowserHive](https://github.com/uraitakahito/browserhive) | `seaweedfs/` | `browserhive` | yes (replay passes `/wacz/` straight through) | `lint:store-name` |
+| [BrowserHive](https://github.com/uraitakahito/browserhive) | `seaweedfs/` | `browserhive` | yes (replayweb-server passes `/wacz/` straight through) | `lint:store-name` |
 | [capture-ledger](https://github.com/uraitakahito/capture-ledger) | `.upstream/seaweedfs/` | `browserhive` | yes | `check:store-name` |
 | [wacz-validator](https://github.com/uraitakahito/wacz-validator) | `seaweedfs/` | `wacz-validator` | no | `check:store-name` |
 

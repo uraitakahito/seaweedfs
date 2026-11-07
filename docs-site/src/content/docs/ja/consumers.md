@@ -7,7 +7,7 @@ description: どの repo がこの store の何を使い、何で見張ってい
 
 | repo | 置き場所 | bucket | 匿名 Read | 見張り |
 |---|---|---|---|---|
-| [BrowserHive](https://github.com/uraitakahito/browserhive) | `seaweedfs/` | `browserhive` | 使う（replay が `/wacz/` を素通しする） | `lint:store-name` |
+| [BrowserHive](https://github.com/uraitakahito/browserhive) | `seaweedfs/` | `browserhive` | 使う（replayweb-server が `/wacz/` を素通しする） | `lint:store-name` |
 | [capture-ledger](https://github.com/uraitakahito/capture-ledger) | `.upstream/seaweedfs/` | `browserhive` | 使う | `check:store-name` |
 | [wacz-validator](https://github.com/uraitakahito/wacz-validator) | `seaweedfs/` | `wacz-validator` | 使わない | `check:store-name` |
 

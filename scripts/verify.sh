@@ -89,7 +89,7 @@ put() {
   fi
 }
 
-# 署名を付けずに素で叩く。replay の nginx がやっているのと同じこと。
+# 署名を付けずに素で叩く。replayweb-server がやっているのと同じこと。
 anon() {
   method="$1"
   path="$2"

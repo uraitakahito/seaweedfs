@@ -179,7 +179,7 @@ entrypoint が bucket を作り直す（`etc/init-bucket.sh` が master の応�
 持っているので、順序を気にする必要はない）。
 
 **成果物を消すと、それを指している台帳の行は残る。** capture-ledger の picker から開くと
-replay が 404 を返す。store を作り直すときは、消費者側の DB も作り直すこと。
+replayweb-server が 404 を返す。store を作り直すときは、消費者側の DB も作り直すこと。
 
 ## 困ったとき
 
