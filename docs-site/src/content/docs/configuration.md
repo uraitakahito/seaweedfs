@@ -5,13 +5,30 @@ description: The three env vars, and how the per-bucket identities get built.
 
 Configuration is the env in `docker-compose.yml`, and nothing else. There is no config file:
 `etc/entrypoint.sh` assembles the identity JSON on the spot — if there is no reason to fork, no fork
-happens.
+happens. Only the capacity (next section) is fixed in the entrypoint rather than exposed as env.
 
 | env | Required | Default | Effect |
 |---|---|---|---|
 | `S3_BUCKETS` | ✓ | — | the buckets to create, comma-separated. **The identity name and the keys are spelled the same** |
 | `S3_ANONYMOUS_READ_BUCKETS` | | (none) | comma-separated buckets that give anonymous `Read:<bucket>` |
 | `S3_INIT_ATTEMPTS` | | `30` | how many times bucket creation retries (per bucket) |
+
+## Capacity
+
+`etc/entrypoint.sh` fixes two settings. No consumer has a reason to differ, so they are not env.
+
+| Setting | Value | SeaweedFS default | Effect |
+|---|---|---|---|
+| `-volume.max` | `64` | `8` | the maximum number of volumes. One volume is 1 GiB (`-master.volumeSizeLimitMB=1024`) |
+| `WEED_MASTER_VOLUME_GROWTH_COPY_1` | `1` | `7` | how many volumes to add at a time |
+
+With the defaults, the default collection takes 7 volumes right after startup and the bucket is left
+with 1. When that one fills up, writes stop with `500 InternalError`.
+
+- **To widen:** recreate the container with `sh scripts/stack.sh up`. The named volume keeps its contents
+- **How it reverts:** running `up` from an older entrypoint silently returns to 8. Consumers bump the submodule first
+- **To read it:** `Topology.Max`, `Free`, and `Layouts[].writables` from `curl -s http://127.0.0.1:9333/dir/status`
+- **What checks it:** `scripts/verify.sh` reads the maximum and how many volumes the first PUT adds
 
 ## The keys are the bucket name
 

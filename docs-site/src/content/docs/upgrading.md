@@ -16,8 +16,8 @@ drifts from it, CI fails (`scripts/check-doc-refs.sh` calls `scripts/check-pin.s
 2. **Run `scripts/verify.sh`.** It checks the behaviours the consumers depend on one at a time, in
    throwaway containers that use `etc/`'s entrypoint as it stands — reading and writing with
    credentials, the shape of anonymous Read, a wrong secret key, presigned URLs, the key length
-   limit (255 bytes), bucket isolation, and writing after the bucket has been emptied and the store
-   restarted. The exit code is the number of reds
+   limit (255 bytes), bucket isolation, the capacity, and writing after the bucket has been emptied
+   and the store restarted. The exit code is the number of reds
 3. Tag it, and bump the submodule in each consumer. Recreate the dev store
 
 ```sh

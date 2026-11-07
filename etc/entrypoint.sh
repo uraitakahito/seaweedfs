@@ -61,9 +61,20 @@ done
 S3_CONFIG=/tmp/seaweedfs-s3.json
 printf '{"identities":[%s]}\n' "$identities" > "${S3_CONFIG}"
 
+# ## 枠
+#
+# 既定は 1 本 1 GiB を 8 本まで、足すときは 1 度に 7 本。起動直後に既定の collection が 7 本を
+# 取るので、bucket に残るのは 1 本で、それが埋まると書き込みが 500 InternalError で止まる
+# (実際に 2026-10 以降 4 回止まった)。枠を広げ、1 本ずつ増やす。
+#
+# この旗と環境変数は entrypoint の外に出していない —— 古い版の entrypoint で立て直すと
+# 黙って枠 8 に戻るので、消費者は pin を上げてから `stack.sh up` を打つ。
+export WEED_MASTER_VOLUME_GROWTH_COPY_1=1
+
 exec weed server \
   -dir=/data \
   -master.volumeSizeLimitMB=1024 \
+  -volume.max=64 \
   -filer \
   -s3 \
   -s3.config="${S3_CONFIG}"

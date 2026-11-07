@@ -17,7 +17,8 @@ other containers and from the host** under the same spelling.
 ## Up and down
 
 The same store comes up from inside a submodule (same project name, same volume), so there is no
-need to leave the consumer's repository.
+need to leave the consumer's repository. But `up` recreates it from that submodule's entrypoint, so
+running it from an old pin returns the [capacity](/configuration/) to 8.
 
 ```sh
 sh scripts/stack.sh up      # or  sh .upstream/seaweedfs/scripts/stack.sh up
