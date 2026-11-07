@@ -17,7 +17,8 @@ sudo container system dns create crawler-storage
 ## 起こす・止める
 
 submodule の中からでも同じ store が立つ（project 名も volume も同じ）ので、消費者の repo から
-出なくてよい。
+出なくてよい。ただし `up` はその submodule の版の entrypoint で作り直すので、古い pin から打つと
+[枠](/ja/configuration/)が 8 に戻る。
 
 ```sh
 sh scripts/stack.sh up      # または  sh .upstream/seaweedfs/scripts/stack.sh up

@@ -81,8 +81,10 @@ sh scripts/wipe.sh browserhive                         # the shared store
 sh scripts/wipe.sh browserhive http://127.0.0.1:18333  # a throwaway store (verify.sh's default port)
 ```
 
-Only the artifacts go; the bucket and SeaweedFS's own state stay. The next capture writes straight
-into it with nothing to recreate. To see what would go without going through with it, add
+Only the artifacts go; the bucket and SeaweedFS's own state stay. If there is capacity left, the
+next capture writes with nothing to recreate. Deleted space only comes back after the master's
+periodic vacuum, so a volume that had filled up cannot be written right after the delete (16 minutes
+when measured on a throwaway store). To see what would go without going through with it, add
 `--dryrun` (extra arguments are passed to `aws`).
 
 ```sh
@@ -196,4 +198,5 @@ database too.
 | `NoSuchBucket` | the entrypoint has not finished creating it; wait on `aws s3 ls` |
 | Buckets you do not recognise | the endpoint is not taking effect — you are looking at the real AWS. Suspect `AWS_PROFILE` too |
 | Deleting does not free space | read `fs.du`, not `s3.bucket.list` |
+| `PUT` returns `500 InternalError` and the consumer keeps failing to write | out of capacity. In `curl -s http://127.0.0.1:9333/dir/status`, is `Free` 0 and that bucket's `writables` empty? `Topology.Max` of 8 means it came up from an older entrypoint (see Capacity in Configuration) |
 | Anonymous read gets 403 | is that bucket in `S3_ANONYMOUS_READ_BUCKETS`? (listing is always 403 for anonymous) |

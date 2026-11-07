@@ -15,7 +15,7 @@ description: 版の正は compose の 1 行。上げる前に verify.sh を回�
 1. `docker-compose.yml` とこの頁の見本の版を書き換える
 2. **`scripts/verify.sh` を回す。** 消費者が頼っている挙動を、`etc/` の entrypoint をそのまま
    使う使い捨てのコンテナで 1 つずつ確かめる —— 資格情報での読み書き、匿名 Read の輪郭、
-   誤った秘密鍵、署名付き URL、鍵の長さの上限（255 バイト）、bucket の分離、空にして
+   誤った秘密鍵、署名付き URL、鍵の長さの上限（255 バイト）、bucket の分離、枠の本数、空にして
    再起動した後の書き込み。終了コードは赤の数
 3. タグを打ち、各消費者で submodule を上げる。dev の store は作り直す
 

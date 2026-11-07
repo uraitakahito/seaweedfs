@@ -5,12 +5,30 @@ description: 3 つの env と、bucket ごとに分かれた identity の作ら�
 
 設定は `docker-compose.yml` の env だけ。設定ファイルは置かず、`etc/entrypoint.sh` が
 identity の JSON をその場で組み立てる —— fork する理由が無ければ、fork は起きない。
+枠（下の節）だけは env にせず、entrypoint に固定してある。
 
 | env | 必須 | 既定 | 効果 |
 |---|---|---|---|
 | `S3_BUCKETS` | ✓ | — | 作る bucket をカンマ区切りで。**identity 名も鍵も同じ綴り** |
 | `S3_ANONYMOUS_READ_BUCKETS` | | （無し） | 匿名に `Read:<bucket>` を与える bucket をカンマ区切りで |
 | `S3_INIT_ATTEMPTS` | | `30` | bucket 作成のリトライ回数（bucket ごと） |
+
+## 枠
+
+`etc/entrypoint.sh` が次の 2 つを固定している。消費者ごとに変える理由が無いので env にしていない。
+
+| 設定 | 値 | SeaweedFS の既定 | 効果 |
+|---|---|---|---|
+| `-volume.max` | `64` | `8` | volume の本数の上限。1 本は 1 GiB（`-master.volumeSizeLimitMB=1024`） |
+| `WEED_MASTER_VOLUME_GROWTH_COPY_1` | `1` | `7` | 1 度に増やす本数 |
+
+既定のままだと、起動直後に既定の collection が 7 本を取り、bucket に 1 本しか残らない。それが埋まると
+書き込みが `500 InternalError` で止まる。
+
+- **広げ方:** `sh scripts/stack.sh up` でコンテナを作り直す。named volume の中身は残る
+- **戻り方:** 古い版の entrypoint から `up` すると、黙って枠 8 に戻る。消費者は submodule を上げてから打つ
+- **見方:** `curl -s http://127.0.0.1:9333/dir/status` の `Topology.Max`・`Free`・`Layouts[].writables`
+- **確かめ:** `scripts/verify.sh` が、枠の本数と、初めて PUT したときに増える本数を見る
 
 ## 鍵は bucket 名と同じ
 

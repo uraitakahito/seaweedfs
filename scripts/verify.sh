@@ -10,14 +10,15 @@
 #   scripts/verify.sh 4.23     # 版を指定する (4.23 では「空にして再起動」の行だけが赤になる)
 #
 # 要るもの: container (Apple Container)、aws (AWS CLI v2)、curl。
-# S3 は 127.0.0.1 の VERIFY_PORT (既定 18333) に publish する —— DNS のドメインにも、
-# 動いている他のスタックの 8333 にも依らない。終われば (途中で落ちても) コンテナと
-# volume を消す。終了コードは赤の数。
+# S3 は 127.0.0.1 の VERIFY_PORT (既定 18333)、master は VERIFY_MASTER_PORT (既定 19333) に
+# publish する —— DNS のドメインにも、動いている他のスタックの 8333・9333 にも依らない。
+# 終われば (途中で落ちても) コンテナと volume を消す。終了コードは赤の数。
 set -eu
 
 here="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 tag="${1:-$(grep -Eo 'chrislusf/seaweedfs:[^"[:space:]]+' "$here/docker-compose.yml" | head -n 1 | cut -d: -f2)}"
 port="${VERIFY_PORT:-18333}"
+master_port="${VERIFY_MASTER_PORT:-19333}"
 name="seaweedfs-verify-$(printf '%s' "$tag" | tr -c 'A-Za-z0-9' '-')"
 bucket=verify
 # 2 つ目の bucket。**共有 store の要**は「ある消費者の鍵で、他人の bucket を触れないこと」。
@@ -58,7 +59,7 @@ expect() {
 start() {
   discard
   container volume create "$name-data" >/dev/null
-  container run -d --name "$name" -p "127.0.0.1:$port:8333" \
+  container run -d --name "$name" -p "127.0.0.1:$port:8333" -p "127.0.0.1:$master_port:9333" \
     -e "S3_BUCKETS=$bucket,$other" \
     -e "S3_ANONYMOUS_READ_BUCKETS=$1" \
     -v "$here/etc:/etc/seaweedfs:ro" -v "$name-data:/data" \
@@ -97,6 +98,18 @@ anon() {
   curl -s -o /dev/null -w '%{http_code}' -m 10 -X "$method" "$@" "$s3/$path"
 }
 
+# master の答えは 1 行の JSON。host に jq を要求しないので grep と sed で読む。
+topology_max() {
+  curl -s -m 10 "http://127.0.0.1:$master_port/dir/status" | grep -o '"Max":[0-9]*' | head -n 1 | cut -d: -f2
+}
+
+# ある collection の書ける volume の本数。無ければ 0。
+writables() {
+  curl -s -m 10 "http://127.0.0.1:$master_port/dir/status" \
+    | sed -n "s/.*\"writables\":\[\([0-9,]*\)\],\"collection\":\"$1\".*/\1/p" \
+    | tr ',' '\n' | grep -c . || true
+}
+
 repeat() {
   out=""
   i=0
@@ -114,6 +127,11 @@ echo "── 匿名 Read を与えた形 (S3_ANONYMOUS_READ_BUCKETS=$bucket)"
 start "$bucket"
 wait_ready
 expect "資格情報で PUT" ok "$(put a/obj.txt)"
+# **枠。** 古い entrypoint や旗の書き忘れで既定の 8 に戻ると、bucket が 1 本しか持てず書けなくなる。
+# PUT の後に読む: volume server が master に名乗るまで Max は 0 を返す (S3 は先に答える)。
+expect "枠の本数" 64 "$(topology_max)"
+# 1 度に増やす本数。既定の 7 本に戻ると、最初の PUT で 7 本取る。
+expect "初めて PUT した bucket の volume" 1 "$(writables "$bucket")"
 expect "資格情報で GET" hello "$(aws s3 cp "s3://$bucket/a/obj.txt" - 2>/dev/null || true)"
 expect "資格情報で一覧" 1 "$(aws s3 ls "s3://$bucket/a/" 2>/dev/null | wc -l | tr -d ' ')"
 expect "匿名 GET" 200 "$(anon GET "$bucket/a/obj.txt")"

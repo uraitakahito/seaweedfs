@@ -78,8 +78,10 @@ sh scripts/wipe.sh browserhive                          # 共有 store
 sh scripts/wipe.sh browserhive http://127.0.0.1:18333   # 使い捨ての store (verify.sh の既定の port)
 ```
 
-消えるのは成果物だけで、bucket も SeaweedFS の状態も残る。次の取り込みは何も作り直さずに
-そのまま書ける。消す前に何が消えるか見たいときは `--dryrun` を足す（`aws` にそのまま渡る）。
+消えるのは成果物だけで、bucket も SeaweedFS の状態も残る。枠が余っていれば、次の取り込みは何も
+作り直さずに書ける。消した分の領域が戻るのは master の定期の vacuum の後で、上限まで埋まった volume
+は消した直後には書けない（使い捨ての store の実測で 16 分）。消す前に何が消えるか見たいときは
+`--dryrun` を足す（`aws` にそのまま渡る）。
 
 ```sh
 sh scripts/wipe.sh browserhive "" --dryrun
@@ -190,4 +192,5 @@ replayweb-server が 404 を返す。store を作り直すときは、消費者�
 | `NoSuchBucket` | entrypoint の bucket 作成が終わっていない。`aws s3 ls` で待つ |
 | 見覚えのない bucket が並ぶ | 宛先が効いていない —— 本物の AWS を見ている。`AWS_PROFILE` も疑う |
 | 消したのに容量が減らない | `s3.bucket.list` ではなく `fs.du` を見る |
+| `PUT` が `500 InternalError`、消費者が書き込みの失敗を繰り返す | 枠が尽きた。`curl -s http://127.0.0.1:9333/dir/status` の `Free` が 0 で、その bucket の `writables` が空か。`Topology.Max` が 8 なら古い entrypoint で立っている（設定の「枠」） |
 | 匿名で読めるはずのものが 403 | その bucket が `S3_ANONYMOUS_READ_BUCKETS` に入っているか（一覧は匿名では常に 403） |
