@@ -132,7 +132,7 @@ http://127.0.0.1:8888/buckets/browserhive/
 container exec seaweedfs.crawler-storage weed filer.meta.scan -pathPrefix=/buckets/browserhive -timeAgo=1h
 ```
 
-台帳に入った取り込みは、[dashboard](https://github.com/uraitakahito/dashboard)（crawler の開発用の
+台帳に入った取り込みは、[dashboard](https://github.com/uraitakahito/dashboard)（[Web Capture](https://uraitakahito.github.io/capture-ledger/ja/#web-capture) を開発するときに手元で開く
 Web アプリ）のアーカイブの画面に新しい順に並ぶ。
 
 ## weed shell —— SeaweedFS 自身の CLI

@@ -1,7 +1,7 @@
 #!/bin/sh
 # 消費者の repo が、共有 store を 1 つの名前で呼んでいるかを見張る。
 #
-# store は crawler で 1 つ (`seaweedfs.crawler-storage`) だが、docs とコードには repo ごとの
+# store は Web Capture で 1 つ (`seaweedfs.crawler-storage`) だが、docs とコードには repo ごとの
 # store を指した `seaweedfs.<project 名>` が残りうる。もう誰も立てていない名前なので**動かない**
 # のに、宛先の綴りを確かめる試験は無いので試験では落ちない —— だから綴りのほうを検査する。
 # 書き写した宛先は必ずずれる、というのが切り出す前からの教訓。
@@ -72,7 +72,7 @@ EOF
 if [ "$problems" -gt 0 ]; then
   echo "" >&2
   echo "✗ 共有 store 以外の名前が残っている (${problems} ファイル)。" >&2
-  echo "  宛先は seaweedfs.${shared} に揃える。store は crawler で 1 つしか立っていない。" >&2
+  echo "  宛先は seaweedfs.${shared} に揃える。store は Web Capture で 1 つしか立っていない。" >&2
   exit 1
 fi
 

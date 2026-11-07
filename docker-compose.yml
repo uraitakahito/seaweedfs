@@ -1,4 +1,4 @@
-# 共有の SeaweedFS。**crawler の store はこれ 1 つ**で、browserhive / capture-ledger /
+# 共有の SeaweedFS。**Web Capture の store はこれ 1 つ**で、browserhive / capture-ledger /
 # wacz-validator はここを見る。動かすのは container-compose
 # (https://github.com/Mcrich23/Container-Compose —— Homebrew で入れる)。
 #
