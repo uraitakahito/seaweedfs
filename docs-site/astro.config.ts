@@ -15,7 +15,7 @@ export default defineConfig({
     starlight({
       title: "seaweedfs Docs",
       // English is the root locale (no prefix); Japanese lives under /ja/.
-      // 他の crawler の repo と同じ配置で、訳の無いページは英語に落ちる。
+      // 他の Web Capture の repo と同じ配置で、訳の無いページは英語に落ちる。
       defaultLocale: "root",
       locales: {
         root: { label: "English", lang: "en" },

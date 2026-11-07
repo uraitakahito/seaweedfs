@@ -1,6 +1,6 @@
 # seaweedfs
 
-crawler の各 repo が共有する SeaweedFS。**store は 1 つだけ立て、3 つの repo がそれを見る。**
+[Web Capture](https://uraitakahito.github.io/capture-ledger/ja/#web-capture) の各 repo が共有する SeaweedFS。**store は 1 つだけ立て、3 つの repo がそれを見る。**
 公式 image (`docker.io/chrislusf/seaweedfs`) をそのまま使い、entrypoint と bucket の初期化だけを
 ここが持つ。配り方は git submodule。
 

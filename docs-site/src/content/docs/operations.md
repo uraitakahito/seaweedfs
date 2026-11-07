@@ -137,7 +137,7 @@ container exec seaweedfs.crawler-storage weed filer.meta.scan -pathPrefix=/bucke
 ```
 
 Captures that made it into the ledger are listed newest first in the archives view of
-[dashboard](https://github.com/uraitakahito/dashboard), the crawler's development web app.
+[dashboard](https://github.com/uraitakahito/dashboard), the web app you open locally while developing [Web Capture](https://uraitakahito.github.io/capture-ledger/#web-capture).
 
 ## weed shell — SeaweedFS's own CLI
 
