@@ -4,7 +4,7 @@
 # entrypoint.sh が `weed server` と並走させる形で背後に起動する —— master が
 # 上がるのを待つ仕事は、下のループが全部やる。
 #
-# `weed shell` は master に gRPC で届く。gRPC の口は HTTP の口より少し遅れて
+# `weed shell` は master に gRPC で届く。gRPC のポートは HTTP のポートより少し遅れて
 # 接続を受け付けることがあり、その間 `weed shell` は
 # "passthrough: received empty target" と言いながら **終了コード 0 で終わる**。
 # 終了コードだけを信じられないので、試行のたびに bucket を列挙し直して

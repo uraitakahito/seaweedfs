@@ -56,11 +56,11 @@ region は指定しなくてよい。SeaweedFS は値を無視するが、SigV4 
 コマンドは [AWS CLI](https://docs.aws.amazon.com/cli/) を使う（`brew install awscli`）。
 S3 API を話す相手なら何でもよいので、`s5cmd` や `mc` でも同じことはできる。
 
-## 2 つの入り口
+## 2 つのエンドポイント
 
-この store は 1 プロセスで master / volume / filer / S3 を兼ねている。外から触れる口は 2 つ。
+この store は 1 プロセスで master / volume / filer / S3 を兼ねている。外から触れるエンドポイントは 2 つ。
 
-| 口 | 宛先 | 用途 |
+| エンドポイント | 宛先 | 用途 |
 |---|---|---|
 | S3 API | `:8333` | `aws` CLI。**普段はこちら** |
 | Filer | `:8888` | ブラウザで中身を見る |

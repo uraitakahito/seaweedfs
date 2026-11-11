@@ -26,12 +26,12 @@ sh scripts/stack.sh down
 ```
 
 `stack.sh` は起こす前に 2 つを見る —— `container` と `container-compose` が PATH に居るか、
-DNS ドメインが登録されているか。足りなければ名指しで止まる。起こした後は、S3 の口が答えるまで
+DNS ドメインが登録されているか。足りなければ名指しで止まる。起こした後は、S3 のエンドポイントが答えるまで
 待って返る。
 
 ## 宛先
 
-| 口 | コンテナから | host から | 用途 |
+| エンドポイント | コンテナから | host から | 用途 |
 |---|---|---|---|
 | S3 API | `http://seaweedfs.crawler-storage:8333` | `http://127.0.0.1:8333` | `aws` CLI。**普段はこちら** |
 | Filer | `http://seaweedfs.crawler-storage:8888` | `http://127.0.0.1:8888` | ブラウザで中身を見る |

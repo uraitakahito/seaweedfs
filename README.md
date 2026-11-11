@@ -26,7 +26,7 @@ sh scripts/stack.sh up
 |---|---|
 | `docker-compose.yml` | **版の正。** image の 1 行が、すべての消費者の基準 |
 | `etc/` | entrypoint（identity を env から組み立てる・枠を固定する）と bucket の初期化 |
-| `scripts/` | `stack.sh`（起動口）・`wipe.sh`・`verify.sh`（版を上げる前に回す）・`check-*.sh` |
+| `scripts/` | `stack.sh`（起こす script）・`wipe.sh`・`verify.sh`（版を上げる前に回す）・`check-*.sh` |
 | `docs-site/` | 上のドキュメントの原稿（Astro + Starlight） |
 
 ## 消費者
