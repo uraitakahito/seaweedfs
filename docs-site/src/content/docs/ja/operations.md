@@ -134,7 +134,7 @@ http://127.0.0.1:8888/buckets/browserhive/
 container exec seaweedfs.crawler-storage weed filer.meta.scan -pathPrefix=/buckets/browserhive -timeAgo=1h
 ```
 
-台帳に入った取り込みは、[capture-workbench](https://github.com/uraitakahito/capture-workbench)（[Web Capture](https://uraitakahito.github.io/capture-ledger/ja/#web-capture) を開発するときに手元で開く
+capture-ledger に入った取り込みは、[capture-workbench](https://github.com/uraitakahito/capture-workbench)（[Web Capture](https://uraitakahito.github.io/capture-ledger/ja/#web-capture) を開発するときに手元で開く
 Web アプリ）のアーカイブの画面に新しい順に並ぶ。
 
 ## weed shell —— SeaweedFS 自身の CLI
@@ -180,7 +180,7 @@ volume を落とすと bucket も SeaweedFS のメタデータも消える。次
 entrypoint が bucket を作り直す（`etc/init-bucket.sh` が master の応答を待つリトライループを
 持っているので、順序を気にする必要はない）。
 
-**成果物を消すと、それを指している台帳の行は残る。** capture-ledger の picker から開くと
+**成果物を消すと、それを指している capture-ledger の行は残る。** capture-ledger の picker から開くと
 replayweb-server が 404 を返す。store を作り直すときは、消費者側の DB も作り直すこと。
 
 ## 困ったとき
