@@ -13,7 +13,7 @@
 #     1 コンテナなので自分は困らないが、**消費者から seaweedfs.crawler-storage が引けなくなる**
 #     —— つまり「立っているのに誰も届かない」という、いちばん読みにくい形になる。
 #
-#   sh scripts/stack.sh up            # 起動 (-d -b は既定で付く)。S3 の口が答えるまで返らない
+#   sh scripts/stack.sh up            # 起動 (-d -b は既定で付く)。S3 のエンドポイントが答えるまで返らない
 #   sh scripts/stack.sh down          # 停止
 #
 # 余分な引数はそのまま container-compose へ渡る。down には点検を掛けない ——
@@ -53,7 +53,7 @@ preflight() {
   fi
 }
 
-# **起こした直後、S3 の口はまだ開いていない** (master の起動から約 12 秒。実測)。消費者は up が
+# **起こした直後、S3 のエンドポイントはまだ開いていない** (master の起動から約 12 秒。実測)。消費者は up が
 # 返った直後に使う —— capture-ledger の dev:up は、すぐ後の段で 8333 を確かめ、開いていなければ
 # 落ちる。だから up は、S3 が答えるまで返らない。
 #
@@ -69,7 +69,7 @@ wait_for_s3() {
     esac
     sleep 1
   done
-  echo "エラー: S3 の口 (${S3_URL}) が ${S3_WAIT_SECONDS} 秒待っても開きません。" >&2
+  echo "エラー: S3 のエンドポイント (${S3_URL}) が ${S3_WAIT_SECONDS} 秒待っても開きません。" >&2
   echo "container logs seaweedfs.${DOMAIN} を見てください。" >&2
   exit 1
 }
