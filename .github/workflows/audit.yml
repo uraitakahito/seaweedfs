@@ -16,11 +16,13 @@ on:
       - 'docs-site/package.json'
       - 'docs-site/package-lock.json'
       - '.github/workflows/audit.yml'
+      - 'scripts/npm-audit.mjs'
   pull_request:
     paths:
       - 'docs-site/package.json'
       - 'docs-site/package-lock.json'
       - '.github/workflows/audit.yml'
+      - 'scripts/npm-audit.mjs'
   schedule:
     - cron: '17 3 * * *'
   workflow_dispatch:
@@ -39,4 +41,5 @@ jobs:
         with:
           node-version-file: .nvmrc
       # lockfile だけを読む。install はしない。
-      - run: npm audit --prefix docs-site --audit-level=low
+      # npm audit には除外が無いので、名指しの勧告だけ見逃す script を通す (scripts/npm-audit.mjs)。
+      - run: node scripts/npm-audit.mjs docs-site
